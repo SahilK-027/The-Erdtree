@@ -33,6 +33,8 @@ export default class Renderer {
     this.rendererInstance = new THREE.WebGLRenderer({
       canvas: this.canvas,
       alpha: true,
+      powerPreference: 'high-performance',
+      antialias: false,
     });
 
     this.rendererInstance.toneMapping = THREE.NeutralToneMapping;
