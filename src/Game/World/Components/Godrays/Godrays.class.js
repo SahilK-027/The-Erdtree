@@ -39,7 +39,7 @@ export default class Godrays {
     this.map.wrapT = THREE.RepeatWrapping;
 
     // Source sphere (layer GLOW)
-    this.sourceGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    this.sourceGeometry = new THREE.SphereGeometry(0.5, 8, 8);
     this.sourceMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -58,7 +58,7 @@ export default class Godrays {
     this.scene.add(this.sourceMesh);
 
     // Inner bloom sphere (layer BLOOM)
-    this.bloomGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+    this.bloomGeometry = new THREE.SphereGeometry(0.1, 8, 8);
     this.bloomMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(initialColor.r, initialColor.g, initialColor.b),
     });
