@@ -55,7 +55,6 @@ export default class Lighting {
       },
     };
 
-    // Ensure correct color space
     this.environmentMap.texture.colorSpace = THREE.SRGBColorSpace;
     this.environmentMap.updateMaterials();
     this.scene.environment = this.environmentMap.texture;

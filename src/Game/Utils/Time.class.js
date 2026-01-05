@@ -6,8 +6,9 @@ export default class Time extends EventEmitter {
 
     this.start = Date.now();
     this.current = this.start;
-    this.elapsedTime = 0;
-    this.delta = 34;
+    this.elapsed = 0;
+    this.delta = 0;
+    this._maxDelta = 0.05;
 
     window.requestAnimationFrame(() => {
       this.animate();
@@ -16,9 +17,9 @@ export default class Time extends EventEmitter {
 
   animate() {
     const currentTime = Date.now();
-    this.delta = (currentTime - this.current) / 1000;
+    this.delta = Math.min((currentTime - this.current) / 1000, this._maxDelta);
     this.current = currentTime;
-    this.elapsedTime = (this.current - this.start) / 1000;
+    this.elapsed = (this.current - this.start) / 1000;
 
     this.trigger('animate');
 

@@ -32,13 +32,11 @@ export default class Renderer {
 
     this.rendererInstance = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: true,
+      alpha: true,
     });
 
     this.rendererInstance.toneMapping = THREE.NeutralToneMapping;
     this.rendererInstance.toneMappingExposure = 1.75;
-    this.rendererInstance.shadowMap.enabled = true;
-    this.rendererInstance.shadowMap.type = THREE.PCFSoftShadowMap;
     this.rendererInstance.setSize(this.sizes.width, this.sizes.height);
     this.rendererInstance.setPixelRatio(this.sizes.pixelRatio);
 
@@ -74,8 +72,6 @@ export default class Renderer {
     if (this.perf) {
       this.perf.beginFrame();
     }
-
-    this.rendererInstance.render(this.scene, this.camera.cameraInstance);
 
     if (this.perf) {
       this.perf.endFrame();

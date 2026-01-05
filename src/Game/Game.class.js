@@ -5,6 +5,7 @@ import Camera from './Core/Camera.class';
 import Renderer from './Core/Renderer.class';
 import World from './World/World.scene';
 import DebugPane from './Utils/DebugPane.class';
+import RenderPipeline from './Core/RenderPipeline.class';
 
 export default class Game {
   constructor(canvas, resources, debugMode) {
@@ -29,6 +30,13 @@ export default class Game {
     this.renderer = new Renderer();
     this.world = new World();
 
+    this.renderPipeline = new RenderPipeline({
+      game: this,
+      renderer: this.renderer,
+      camera: this.camera,
+      scene: this.scene,
+    });
+
     this.time.on('animate', () => {
       this.update();
     });
@@ -47,12 +55,22 @@ export default class Game {
   resize() {
     this.camera.resize();
     this.renderer.resize();
+    this.renderPipeline.resize();
   }
 
   update() {
     this.camera.update();
     this.world.update();
-    this.renderer.update();
+
+    if (this.renderer.perf) {
+      this.renderer.perf.beginFrame();
+    }
+
+    this.renderPipeline.render();
+
+    if (this.renderer.perf) {
+      this.renderer.perf.endFrame();
+    }
   }
 
   destroy() {
@@ -77,7 +95,6 @@ export default class Game {
           ? child.material
           : [child.material];
         mats.forEach((m) => {
-          // dispose textures
           for (const key in m) {
             const prop = m[key];
             if (prop && prop.isTexture) prop.dispose();
@@ -91,7 +108,6 @@ export default class Game {
     this.renderer.rendererInstance.dispose();
     if (this.debug) this.debug.dispose();
 
-    // Null references
     this.canvas = null;
     this.scene = null;
     this.camera = null;
