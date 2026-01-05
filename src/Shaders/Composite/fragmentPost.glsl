@@ -17,7 +17,7 @@ void main() {
 
   vec4 color = vec4(0.0);
   float total = 0.0;
-  float samples = 64.0;
+  float samples = 32.0;
 
   for(float i = 0.0; i < samples; i++) {
     float lerp = (i + interleavedGradientNoise(vec2(gl_FragCoord.xy))) / samples;

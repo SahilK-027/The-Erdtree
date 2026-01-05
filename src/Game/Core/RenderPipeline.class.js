@@ -11,21 +11,31 @@ export default class RenderPipeline {
     this.sizes = this.game.sizes;
 
     this.postProcessing = new PostProcessing();
+    this.cachedLayerMasks = new Map();
+    this.currentLayerMask = null;
+    this.initializeLayerMasks();
   }
 
-  setCameraLayers(layersArray) {
-    this.camera.layers.set(0);
-    this.camera.layers.disable(0);
-    layersArray.forEach((layer) => {
-      this.camera.layers.enable(layer);
+  initializeLayerMasks() {
+    Object.keys(PASS_CONFIG).forEach((key) => {
+      const layers = PASS_CONFIG[key];
+      this.cachedLayerMasks.set(key, [...layers]);
     });
   }
 
   setCameraToLayers(layersArray) {
-    if (layersArray.length === 1) {
-      this.camera.layers.set(layersArray[0]);
-    } else {
-      this.setCameraLayers(layersArray);
+    const key = layersArray.slice().sort().join(',');
+    
+    if (this.currentLayerKey !== key) {
+      if (layersArray.length === 1) {
+        this.camera.layers.set(layersArray[0]);
+      } else {
+        this.camera.layers.disableAll();
+        layersArray.forEach((layer) => {
+          this.camera.layers.enable(layer);
+        });
+      }
+      this.currentLayerKey = key;
     }
   }
 
@@ -46,12 +56,9 @@ export default class RenderPipeline {
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
 
-    // PASS 4: Apply bloom composite additively on top
+    // PASS 4: Apply combined post-processing effects (bloom + glow) in single pass
     this.renderer.autoClear = false;
-    this.postProcessing.compositePass.renderBloom();
-
-    // PASS 5: Apply post-processing glow effect additively on top
-    this.postProcessing.compositePass.renderGlow();
+    this.postProcessing.compositePass.renderCombined();
     this.renderer.autoClear = true;
   }
 
