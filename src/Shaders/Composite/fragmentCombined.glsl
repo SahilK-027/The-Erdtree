@@ -15,7 +15,6 @@ float interleavedGradientNoise(vec2 coord) {
   return fract(magic.z * fract(dot(coord, magic.xy)));
 }
 
-// Glow effect function (reused from fragmentPost.glsl logic)
 vec4 computeGlow(sampler2D map, vec2 uv, vec2 meshCenter, vec3 colorMultiplier, float samples) {
   vec2 toCenter = meshCenter - uv;
   vec4 glowColor = vec4(0.0);

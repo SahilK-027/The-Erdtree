@@ -18,7 +18,7 @@ export default class Godrays {
     };
 
     this.params = {
-      rotationSpeed: 0.25,
+      rotationSpeed: 0.0,
       tile: 7,
       cutoff: 0.35,
       feather: 0.02,

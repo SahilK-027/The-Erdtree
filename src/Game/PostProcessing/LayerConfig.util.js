@@ -1,4 +1,3 @@
-// Layer Configuration
 // Note: Layer 0 is the default layer in Three.js
 export const LAYERS = {
   NO_FX: 0, // Objects with no effects (default layer)
