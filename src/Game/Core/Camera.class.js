@@ -3,7 +3,7 @@ import Game from '../Game.class';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export default class Camera {
-  constructor(fov = 65, near = 0.1, far = 100) {
+  constructor(fov = 35, near = 0.1, far = 150) {
     this.game = Game.getInstance();
     this.canvas = this.game.canvas;
     this.sizes = this.game.sizes;
@@ -12,6 +12,9 @@ export default class Camera {
     this.isDebugEnabled = this.game.isDebugEnabled;
 
     this.params = { fov, near, far };
+
+    // Erdtree focal point - look at the trunk/lower canopy
+    this.targetPoint = new THREE.Vector3(0, 0.7, 0);
 
     this.setPerspectiveCameraInstance(fov, near, far);
     this.setOrbitControls();
@@ -29,14 +32,35 @@ export default class Camera {
       near,
       far
     );
-    this.cameraInstance.position.set(0, 0.25, 2.5);
+
+    // Cinematic low-angle hero shot - close and looking up
+    this.cameraInstance.position.set(1.5, 0.85, 1.9);
     this.scene.add(this.cameraInstance);
   }
 
   setOrbitControls() {
     this.controls = new OrbitControls(this.cameraInstance, this.canvas);
     this.controls.enableDamping = true;
-    this.controls.maxPolarAngle = Math.PI / 2.3;
+    this.controls.dampingFactor = 0.05;
+
+    // Focus on the erdtree
+    this.controls.target.copy(this.targetPoint);
+
+    // Cinematic constraints - allow looking up at the tree
+    this.controls.minPolarAngle = Math.PI / 8; // Can look up high
+    this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
+
+    // Distance constraints - keep it intimate
+    this.controls.minDistance = 1;
+    this.controls.maxDistance = 5;
+
+    // Smooth rotation
+    this.controls.rotateSpeed = 0.5;
+    this.controls.zoomSpeed = 0.8;
+
+    // Optional: auto-rotate for cinematic feel
+    this.controls.autoRotate = false;
+    this.controls.autoRotateSpeed = 0.3;
   }
 
   resize() {
@@ -47,6 +71,7 @@ export default class Camera {
 
   update() {
     this.controls.update();
+    console.log(this.cameraInstance.position);
   }
 
   initTweakPane() {
@@ -73,8 +98,8 @@ export default class Camera {
       'x',
       {
         label: 'Position X',
-        min: -10,
-        max: 10,
+        min: -20,
+        max: 20,
         step: 0.1,
       },
       folder
@@ -86,7 +111,7 @@ export default class Camera {
       {
         label: 'Position Y',
         min: -10,
-        max: 10,
+        max: 15,
         step: 0.1,
       },
       folder
@@ -97,8 +122,41 @@ export default class Camera {
       'z',
       {
         label: 'Position Z',
-        min: -10,
-        max: 10,
+        min: -20,
+        max: 20,
+        step: 0.1,
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.controls.target,
+      'y',
+      {
+        label: 'Look At Y',
+        min: 0,
+        max: 5,
+        step: 0.1,
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.controls,
+      'autoRotate',
+      {
+        label: 'Auto Rotate',
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.controls,
+      'autoRotateSpeed',
+      {
+        label: 'Rotate Speed',
+        min: 0.1,
+        max: 2,
         step: 0.1,
       },
       folder

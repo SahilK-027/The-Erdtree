@@ -53,20 +53,20 @@ export default class Godrays {
     });
 
     this.sourceMesh = new THREE.Mesh(this.sourceGeometry, this.sourceMaterial);
-    this.sourceMesh.position.y = 1.12;
+    this.sourceMesh.position.y = 1.1;
     this.sourceMesh.layers.set(LAYERS.GLOW);
     this.scene.add(this.sourceMesh);
 
     // Inner bloom sphere (layer BLOOM)
-    this.bloomGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-    this.bloomMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(initialColor.r, initialColor.g, initialColor.b),
-    });
+    // this.bloomGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+    // this.bloomMaterial = new THREE.MeshBasicMaterial({
+    //   color: new THREE.Color(initialColor.r, initialColor.g, initialColor.b),
+    // });
 
-    this.bloomMesh = new THREE.Mesh(this.bloomGeometry, this.bloomMaterial);
-    this.bloomMesh.layers.set(LAYERS.BLOOM);
-    this.bloomMesh.position.y = 1.12;
-    this.scene.add(this.bloomMesh);
+    // this.bloomMesh = new THREE.Mesh(this.bloomGeometry, this.bloomMaterial);
+    // this.bloomMesh.layers.set(LAYERS.BLOOM);
+    // this.bloomMesh.position.y = 1.12;
+    // this.scene.add(this.bloomMesh);
   }
 
   update() {
@@ -83,56 +83,96 @@ export default class Godrays {
   initTweakPane() {
     const folder = 'Godrays';
 
-    this.debug.add(this.params, 'rotationSpeed', {
-      label: 'Rotation Speed',
-      min: 0,
-      max: 2,
-      step: 0.01,
-    }, folder);
-
-    this.debug.add(this.params, 'tile', {
-      label: 'Tile',
-      min: 1,
-      max: 20,
-      step: 1,
-      onChange: (v) => { this.sourceMaterial.uniforms.uTile.value = v; },
-    }, folder);
-
-    this.debug.add(this.params, 'cutoff', {
-      label: 'Cutoff',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      onChange: (v) => { this.sourceMaterial.uniforms.uCutoff.value = v; },
-    }, folder);
-
-    this.debug.add(this.params, 'feather', {
-      label: 'Feather',
-      min: 0,
-      max: 0.2,
-      step: 0.001,
-      onChange: (v) => { this.sourceMaterial.uniforms.uFeather.value = v; },
-    }, folder);
-
-    this.debug.add(this.sourceMesh.position, 'y', {
-      label: 'Height',
-      min: 0,
-      max: 3,
-      step: 0.01,
-      onChange: (v) => { this.bloomMesh.position.y = v; },
-    }, folder);
-
-    this.debug.add(this.colorParams, 'color', {
-      label: 'Color',
-      color: true,
-      onChange: (v) => {
-        const color = new THREE.Color(v);
-        this.bloomMaterial.color.copy(color);
-        if (this.game.renderPipeline?.postProcessing?.compositePass) {
-          this.game.renderPipeline.postProcessing.compositePass.glowMaterial.uniforms.uColorMultiplier.value.copy(color);
-        }
+    this.debug.add(
+      this.params,
+      'rotationSpeed',
+      {
+        label: 'Rotation Speed',
+        min: 0,
+        max: 2,
+        step: 0.01,
       },
-    }, folder);
+      folder
+    );
+
+    this.debug.add(
+      this.params,
+      'tile',
+      {
+        label: 'Tile',
+        min: 1,
+        max: 20,
+        step: 1,
+        onChange: (v) => {
+          this.sourceMaterial.uniforms.uTile.value = v;
+        },
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.params,
+      'cutoff',
+      {
+        label: 'Cutoff',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        onChange: (v) => {
+          this.sourceMaterial.uniforms.uCutoff.value = v;
+        },
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.params,
+      'feather',
+      {
+        label: 'Feather',
+        min: 0,
+        max: 0.2,
+        step: 0.001,
+        onChange: (v) => {
+          this.sourceMaterial.uniforms.uFeather.value = v;
+        },
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.sourceMesh.position,
+      'y',
+      {
+        label: 'Height',
+        min: 0,
+        max: 3,
+        step: 0.01,
+        onChange: (v) => {
+          this.bloomMesh.position.y = v;
+        },
+      },
+      folder
+    );
+
+    this.debug.add(
+      this.colorParams,
+      'color',
+      {
+        label: 'Color',
+        color: true,
+        onChange: (v) => {
+          const color = new THREE.Color(v);
+          this.bloomMaterial.color.copy(color);
+          if (this.game.renderPipeline?.postProcessing?.compositePass) {
+            this.game.renderPipeline.postProcessing.compositePass.glowMaterial.uniforms.uColorMultiplier.value.copy(
+              color
+            );
+          }
+        },
+      },
+      folder
+    );
   }
 
   destroy() {

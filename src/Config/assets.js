@@ -16,6 +16,11 @@ const ASSETS = [
     type: 'texture',
     path: '/assets/textures/godrays/godrays_pattern.png',
   },
+  {
+    id: 'erdtreeModel',
+    type: 'gltfModelCompressed',
+    path: '/assets/models/erdtree.glb',
+  },
 ];
 
 export default ASSETS;

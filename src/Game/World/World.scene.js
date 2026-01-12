@@ -3,6 +3,7 @@ import Game from '../Game.class';
 import DebugFloor from './Components/DebugFloor/DebugFloor.class';
 import Lighting from './Components/Lighting/Lighting.class';
 import Godrays from './Components/Godrays/Godrays.class';
+import Erdtree from './Components/Erdtree/Erdtree.class';
 
 export default class World {
   constructor() {
@@ -15,6 +16,7 @@ export default class World {
     this.scene.fog = new THREE.FogExp2(0x121316, 0.075);
     this.debugFloor = new DebugFloor();
     this.godrays = new Godrays();
+    this.erdtree = new Erdtree();
 
     this.lighting = new Lighting({ helperEnabled: false });
   }
