@@ -71,7 +71,6 @@ export default class Camera {
 
   update() {
     this.controls.update();
-    console.log(this.cameraInstance.position);
   }
 
   initTweakPane() {
