@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import Game from '../../../Game.class';
 import { LAYERS } from '../../../PostProcessing/LayerConfig.util';
+import vertexShaderErdTree from '../../../../Shaders/Erdtree/vertex.glsl';
+import fragmentShaderErdTree from '../../../../Shaders/Erdtree/fragment.glsl';
 
 export default class Erdtree {
   constructor() {
@@ -13,7 +15,14 @@ export default class Erdtree {
     this.params = {
       scale: 1,
       positionY: -0.1,
-      shellScale: 1.002, // Outer shell scale multiplier
+      baseColor: '#8c8671',
+      fresnelColor: '#e8d2b1',
+      fresnelPower: 2.0,
+      fresnelIntensity: 1.0,
+      trunkFadeStart: -1.0,
+      trunkFadeEnd: 0.5,
+      trunkOpacity: 0.2,
+      glowIntensity: 0.8,
     };
 
     this.setup();
@@ -25,102 +34,197 @@ export default class Erdtree {
 
   setup() {
     const gltf = this.resources.items.erdtreeModel;
-    
-    // Layer A (Core): The opaque inner mesh with "hard" gold color
-    this.coreModel = gltf.scene;
-    this.coreModel.traverse((child) => {
+    this.model = gltf.scene;
+
+    this.createShaderMaterial();
+
+    this.model.traverse((child) => {
       if (child.isMesh) {
         child.layers.set(LAYERS.BLOOM);
+        child.material = this.shaderMaterial;
       }
     });
-    this.coreModel.scale.setScalar(this.params.scale);
-    this.coreModel.position.y = this.params.positionY;
-    this.scene.add(this.coreModel);
 
-    // Layer B (Shell): Slightly scaled-up duplicate for holographic effect
-    this.shellModel = gltf.scene.clone(true);
-    this.shellModel.traverse((child) => {
-      if (child.isMesh) {
-        child.layers.set(LAYERS.BLOOM);
-        // Clone materials so we can modify them independently
-        if (child.material) {
-          child.material = child.material.clone();
-          child.material.transparent = true;
-          child.material.opacity = 0.5;
-          child.material.side = THREE.DoubleSide;
-          child.material.blending = THREE.AdditiveBlending;
-          child.material.depthWrite = false;
-        }
-      }
+    this.model.scale.setScalar(this.params.scale);
+    this.model.position.y = this.params.positionY;
+    this.scene.add(this.model);
+  }
+
+  createShaderMaterial() {
+    this.shaderMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uBaseColor: { value: new THREE.Color(this.params.baseColor) },
+        uFresnelColor: { value: new THREE.Color(this.params.fresnelColor) },
+        uFresnelPower: { value: this.params.fresnelPower },
+        uFresnelIntensity: { value: this.params.fresnelIntensity },
+        uTrunkFadeStart: { value: this.params.trunkFadeStart },
+        uTrunkFadeEnd: { value: this.params.trunkFadeEnd },
+        uTrunkOpacity: { value: this.params.trunkOpacity },
+        uGlowIntensity: { value: this.params.glowIntensity },
+      },
+      vertexShader: vertexShaderErdTree,
+      fragmentShader: fragmentShaderErdTree,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false,
     });
-    const shellScaleValue = this.params.scale * this.params.shellScale;
-    this.shellModel.scale.setScalar(shellScaleValue);
-    this.shellModel.position.y = this.params.positionY;
-    this.scene.add(this.shellModel);
-
-    // Keep reference for backwards compatibility
-    this.model = this.coreModel;
   }
 
   initTweakPane() {
     const folder = 'Erdtree';
 
-    this.debug.add(this.params, 'scale', {
-      label: 'Scale',
-      min: 0.1,
-      max: 5,
-      step: 0.1,
-      onChange: (v) => {
-        this.coreModel.scale.setScalar(v);
-        this.shellModel.scale.setScalar(v * this.params.shellScale);
+    this.debug.add(
+      this.params,
+      'scale',
+      {
+        label: 'Scale',
+        min: 0.1,
+        max: 5,
+        step: 0.1,
+        onChange: (v) => {
+          this.model.scale.setScalar(v);
+        },
       },
-    }, folder);
+      folder,
+    );
 
-    this.debug.add(this.params, 'positionY', {
-      label: 'Position Y',
-      min: -5,
-      max: 5,
-      step: 0.1,
-      onChange: (v) => {
-        this.coreModel.position.y = v;
-        this.shellModel.position.y = v;
+    this.debug.add(
+      this.params,
+      'positionY',
+      {
+        label: 'Position Y',
+        min: -5,
+        max: 5,
+        step: 0.1,
+        onChange: (v) => {
+          this.model.position.y = v;
+        },
       },
-    }, folder);
+      folder,
+    );
 
-    this.debug.add(this.params, 'shellScale', {
-      label: 'Shell Scale',
-      min: 1.0,
-      max: 1.05,
-      step: 0.001,
-      onChange: (v) => {
-        this.shellModel.scale.setScalar(this.params.scale * v);
+    this.debug.add(
+      this.params,
+      'baseColor',
+      {
+        label: 'Base Color',
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uBaseColor.value.set(v);
+        },
       },
-    }, folder);
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'fresnelColor',
+      {
+        label: 'Fresnel Color',
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uFresnelColor.value.set(v);
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'fresnelPower',
+      {
+        label: 'Fresnel Power',
+        min: 0.1,
+        max: 10,
+        step: 0.1,
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uFresnelPower.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'fresnelIntensity',
+      {
+        label: 'Fresnel Intensity',
+        min: 0,
+        max: 3,
+        step: 0.1,
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uFresnelIntensity.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'trunkFadeStart',
+      {
+        label: 'Trunk Fade Start',
+        min: -5,
+        max: 5,
+        step: 0.1,
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uTrunkFadeStart.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'trunkFadeEnd',
+      {
+        label: 'Trunk Fade End',
+        min: -5,
+        max: 5,
+        step: 0.1,
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uTrunkFadeEnd.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'trunkOpacity',
+      {
+        label: 'Trunk Opacity',
+        min: 0,
+        max: 1,
+        step: 0.05,
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uTrunkOpacity.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'glowIntensity',
+      {
+        label: 'Glow Intensity',
+        min: 0,
+        max: 3,
+        step: 0.1,
+        onChange: (v) => {
+          this.shaderMaterial.uniforms.uGlowIntensity.value = v;
+        },
+      },
+      folder,
+    );
   }
 
   destroy() {
-    // Dispose core model
-    this.coreModel.traverse((child) => {
+    this.model.traverse((child) => {
       if (child.isMesh) {
         child.geometry?.dispose();
-        if (child.material) {
-          const materials = Array.isArray(child.material) ? child.material : [child.material];
-          materials.forEach((mat) => mat.dispose());
-        }
       }
     });
-    this.scene.remove(this.coreModel);
-
-    // Dispose shell model
-    this.shellModel.traverse((child) => {
-      if (child.isMesh) {
-        child.geometry?.dispose();
-        if (child.material) {
-          const materials = Array.isArray(child.material) ? child.material : [child.material];
-          materials.forEach((mat) => mat.dispose());
-        }
-      }
-    });
-    this.scene.remove(this.shellModel);
+    this.shaderMaterial?.dispose();
+    this.scene.remove(this.model);
   }
 }

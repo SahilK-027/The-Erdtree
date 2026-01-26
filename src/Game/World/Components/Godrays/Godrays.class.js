@@ -14,7 +14,7 @@ export default class Godrays {
     this.isDebugEnabled = this.game.isDebugEnabled;
 
     this.colorParams = {
-      color: '#ffe5b8',
+      color: '#ffeab8',
     };
 
     this.params = {

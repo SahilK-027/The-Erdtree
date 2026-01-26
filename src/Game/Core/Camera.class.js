@@ -51,8 +51,8 @@ export default class Camera {
     this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
 
     // Distance constraints - keep it intimate
-    this.controls.minDistance = 1;
-    this.controls.maxDistance = 5;
+    // this.controls.minDistance = 1;
+    // this.controls.maxDistance = 5;
 
     // Smooth rotation
     this.controls.rotateSpeed = 0.5;
