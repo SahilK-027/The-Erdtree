@@ -23,5 +23,6 @@ export default class World {
 
   update() {
     this.godrays.update();
+    this.erdtree.update();
   }
 }

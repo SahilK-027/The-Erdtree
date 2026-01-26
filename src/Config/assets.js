@@ -21,6 +21,11 @@ const ASSETS = [
     type: 'gltfModelCompressed',
     path: '/assets/models/erdtree.glb',
   },
+  {
+    id: 'leafModel',
+    type: 'gltfModelCompressed',
+    path: '/assets/models/leaf.glb',
+  },
 ];
 
 export default ASSETS;

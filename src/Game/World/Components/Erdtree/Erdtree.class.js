@@ -23,6 +23,14 @@ export default class Erdtree {
       trunkFadeEnd: 0.5,
       trunkOpacity: 0.2,
       glowIntensity: 0.8,
+      leafCount: 7000,
+      leafScale: 0.035,
+      leafMinHeight: 0.5,
+      leafRandomness: 0.3,
+      leafNormalOffset: 0.1,
+      leafRadialBias: 0.7,
+      useLOD: true,
+      lodDistance: 10,
     };
 
     this.setup();
@@ -48,6 +56,8 @@ export default class Erdtree {
     this.model.scale.setScalar(this.params.scale);
     this.model.position.y = this.params.positionY;
     this.scene.add(this.model);
+
+    this.createInstancedLeaves();
   }
 
   createShaderMaterial() {
@@ -68,6 +78,299 @@ export default class Erdtree {
       side: THREE.DoubleSide,
       depthWrite: false,
     });
+  }
+
+  createInstancedLeaves() {
+    const leafGltf = this.resources.items.leafModel;
+    if (!leafGltf) {
+      console.warn('Leaf model not loaded');
+      return;
+    }
+
+    // Extract leaf geometry and material
+    let leafGeometry = null;
+    let leafMaterial = null;
+
+    leafGltf.scene.traverse((child) => {
+      if (child.isMesh && !leafGeometry) {
+        leafGeometry = child.geometry;
+        leafMaterial = child.material;
+      }
+    });
+
+    if (!leafGeometry) {
+      console.warn('No geometry found in leaf model');
+      return;
+    }
+
+    // Clone and optimize material
+    leafMaterial = leafMaterial.clone();
+    leafMaterial.side = THREE.FrontSide; // Only render front faces
+    
+    // Sample positions from erdtree mesh
+    const positions = this.samplePositionsOnTree(this.params.leafCount);
+
+    // Create instanced mesh
+    this.instancedLeaves = new THREE.InstancedMesh(
+      leafGeometry,
+      leafMaterial,
+      this.params.leafCount
+    );
+
+    // Performance optimizations
+    this.instancedLeaves.frustumCulled = true; // Enable frustum culling
+    this.instancedLeaves.instanceMatrix.setUsage(THREE.StaticDrawUsage); // Static since leaves don't move
+
+    // Set up instances
+    const matrix = new THREE.Matrix4();
+    const position = new THREE.Vector3();
+    const rotation = new THREE.Euler();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+
+    positions.forEach((pos, i) => {
+      position.copy(pos);
+
+      // Random rotation for variety
+      rotation.set(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      );
+      quaternion.setFromEuler(rotation);
+
+      // Scale with slight randomness
+      const scaleValue = this.params.leafScale * (0.8 + Math.random() * 0.4);
+      scale.set(scaleValue, scaleValue, scaleValue);
+
+      matrix.compose(position, quaternion, scale);
+      this.instancedLeaves.setMatrixAt(i, matrix);
+    });
+
+    this.instancedLeaves.instanceMatrix.needsUpdate = true;
+    this.instancedLeaves.layers.set(LAYERS.BLOOM);
+    
+    // Compute bounding sphere for better frustum culling
+    this.instancedLeaves.computeBoundingSphere();
+    
+    this.scene.add(this.instancedLeaves);
+
+    // Setup LOD if enabled
+    if (this.params.useLOD) {
+      this.setupLOD();
+    }
+  }
+
+  setupLOD() {
+    // Create LOD group
+    if (this.leafLOD) {
+      this.scene.remove(this.leafLOD);
+    }
+
+    this.leafLOD = new THREE.LOD();
+    
+    // Move instanced mesh to LOD
+    if (this.instancedLeaves) {
+      this.scene.remove(this.instancedLeaves);
+      this.leafLOD.addLevel(this.instancedLeaves, 0);
+      
+      // Create lower detail version (fewer instances visible)
+      const lowDetailCount = Math.floor(this.params.leafCount * 0.3);
+      const lowDetailMesh = this.createLowDetailLeaves(lowDetailCount);
+      if (lowDetailMesh) {
+        this.leafLOD.addLevel(lowDetailMesh, this.params.lodDistance);
+      }
+    }
+    
+    this.scene.add(this.leafLOD);
+  }
+
+  createLowDetailLeaves(count) {
+    if (!this.instancedLeaves) return null;
+
+    const geometry = this.instancedLeaves.geometry;
+    const material = this.instancedLeaves.material;
+
+    const lowDetailMesh = new THREE.InstancedMesh(
+      geometry,
+      material,
+      count
+    );
+
+    lowDetailMesh.frustumCulled = true;
+    lowDetailMesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+
+    // Copy every Nth matrix from the full detail mesh
+    const step = Math.floor(this.params.leafCount / count);
+    const matrix = new THREE.Matrix4();
+
+    for (let i = 0; i < count; i++) {
+      const sourceIndex = i * step;
+      this.instancedLeaves.getMatrixAt(sourceIndex, matrix);
+      lowDetailMesh.setMatrixAt(i, matrix);
+    }
+
+    lowDetailMesh.instanceMatrix.needsUpdate = true;
+    lowDetailMesh.layers.set(LAYERS.BLOOM);
+    lowDetailMesh.computeBoundingSphere();
+
+    return lowDetailMesh;
+  }
+
+  samplePositionsOnTree(count) {
+    const positions = [];
+    
+    // Reuse objects to reduce GC pressure
+    const tempPosition = new THREE.Vector3();
+    const tempNormal = new THREE.Vector3();
+    const v1 = new THREE.Vector3();
+    const v2 = new THREE.Vector3();
+    const v3 = new THREE.Vector3();
+    const n1 = new THREE.Vector3();
+    const n2 = new THREE.Vector3();
+    const n3 = new THREE.Vector3();
+
+    // Collect all mesh geometries from the erdtree
+    const meshes = [];
+    this.model.traverse((child) => {
+      if (child.isMesh) {
+        meshes.push(child);
+      }
+    });
+
+    if (meshes.length === 0) return positions;
+
+    // Pre-calculate mesh weights based on surface area for better distribution
+    const meshWeights = meshes.map(mesh => {
+      const posAttr = mesh.geometry.attributes.position;
+      return posAttr ? posAttr.count : 0;
+    });
+    const totalWeight = meshWeights.reduce((a, b) => a + b, 0);
+
+    // Sample random points on the tree surface
+    let attempts = 0;
+    const maxAttempts = count * 3;
+
+    for (let i = 0; i < count && attempts < maxAttempts; i++) {
+      attempts++;
+
+      // Pick a random mesh weighted by surface area
+      let random = Math.random() * totalWeight;
+      let meshIndex = 0;
+      for (let j = 0; j < meshWeights.length; j++) {
+        random -= meshWeights[j];
+        if (random <= 0) {
+          meshIndex = j;
+          break;
+        }
+      }
+
+      const mesh = meshes[meshIndex];
+      const geometry = mesh.geometry;
+      const positionAttribute = geometry.attributes.position;
+      const normalAttribute = geometry.attributes.normal;
+
+      if (!positionAttribute) continue;
+
+      // Pick a random triangle
+      const triangleCount = Math.floor(positionAttribute.count / 3);
+      const triangleIndex = Math.floor(Math.random() * triangleCount) * 3;
+
+      // Get triangle vertices (reuse vectors)
+      v1.fromBufferAttribute(positionAttribute, triangleIndex);
+      v2.fromBufferAttribute(positionAttribute, triangleIndex + 1);
+      v3.fromBufferAttribute(positionAttribute, triangleIndex + 2);
+
+      // Get triangle normals (reuse vectors)
+      if (normalAttribute) {
+        n1.fromBufferAttribute(normalAttribute, triangleIndex);
+        n2.fromBufferAttribute(normalAttribute, triangleIndex + 1);
+        n3.fromBufferAttribute(normalAttribute, triangleIndex + 2);
+      } else {
+        n1.set(0, 1, 0);
+        n2.set(0, 1, 0);
+        n3.set(0, 1, 0);
+      }
+
+      // Random barycentric coordinates with bias toward edges
+      const r1 = Math.pow(Math.random(), this.params.leafRadialBias);
+      const r2 = Math.pow(Math.random(), this.params.leafRadialBias);
+      const sqrtR1 = Math.sqrt(r1);
+      const w1 = 1 - sqrtR1;
+      const w2 = sqrtR1 * (1 - r2);
+      const w3 = sqrtR1 * r2;
+
+      // Interpolate position
+      tempPosition.set(
+        v1.x * w1 + v2.x * w2 + v3.x * w3,
+        v1.y * w1 + v2.y * w2 + v3.y * w3,
+        v1.z * w1 + v2.z * w2 + v3.z * w3
+      );
+
+      // Interpolate normal
+      tempNormal.set(
+        n1.x * w1 + n2.x * w2 + n3.x * w3,
+        n1.y * w1 + n2.y * w2 + n3.y * w3,
+        n1.z * w1 + n2.z * w2 + n3.z * w3
+      );
+      tempNormal.normalize();
+
+      // Transform to world space
+      mesh.localToWorld(tempPosition);
+      tempNormal.transformDirection(mesh.matrixWorld);
+
+      // Calculate distance from center (trunk)
+      const distanceFromCenter = Math.sqrt(tempPosition.x * tempPosition.x + tempPosition.z * tempPosition.z);
+
+      // Filter by height and distance (favor outer branches)
+      if (tempPosition.y >= this.params.leafMinHeight && distanceFromCenter > 0.2) {
+        // Offset along normal (push leaves away from surface)
+        tempPosition.x += tempNormal.x * this.params.leafNormalOffset;
+        tempPosition.y += tempNormal.y * this.params.leafNormalOffset;
+        tempPosition.z += tempNormal.z * this.params.leafNormalOffset;
+
+        // Add some randomness to position
+        tempPosition.x += (Math.random() - 0.5) * this.params.leafRandomness;
+        tempPosition.y += (Math.random() - 0.5) * this.params.leafRandomness;
+        tempPosition.z += (Math.random() - 0.5) * this.params.leafRandomness;
+
+        positions.push(tempPosition.clone());
+      } else {
+        // Try again if conditions not met
+        i--;
+      }
+    }
+
+    return positions;
+  }
+
+  updateLeaves() {
+    if (this.instancedLeaves) {
+      this.scene.remove(this.instancedLeaves);
+      this.instancedLeaves.geometry?.dispose();
+      this.instancedLeaves.material?.dispose();
+      this.instancedLeaves.dispose();
+    }
+    if (this.leafLOD) {
+      this.scene.remove(this.leafLOD);
+      // Dispose LOD levels
+      this.leafLOD.levels.forEach(level => {
+        if (level.object && level.object !== this.instancedLeaves) {
+          level.object.geometry?.dispose();
+          level.object.material?.dispose();
+          level.object.dispose();
+        }
+      });
+      this.leafLOD = null;
+    }
+    this.createInstancedLeaves();
+  }
+
+  update() {
+    // Update LOD based on camera distance
+    if (this.leafLOD && this.game.camera) {
+      this.leafLOD.update(this.game.camera.cameraInstance);
+    }
   }
 
   initTweakPane() {
@@ -216,6 +519,126 @@ export default class Erdtree {
       },
       folder,
     );
+
+    // Leaf controls
+    this.debug.add(
+      this.params,
+      'leafCount',
+      {
+        label: 'Leaf Count',
+        min: 0,
+        max: 2000,
+        step: 50,
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'leafScale',
+      {
+        label: 'Leaf Scale',
+        min: 0.05,
+        max: 0.5,
+        step: 0.01,
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'leafMinHeight',
+      {
+        label: 'Leaf Min Height',
+        min: -1,
+        max: 3,
+        step: 0.1,
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'leafRandomness',
+      {
+        label: 'Leaf Randomness',
+        min: 0,
+        max: 1,
+        step: 0.05,
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'leafNormalOffset',
+      {
+        label: 'Leaf Normal Offset',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'leafRadialBias',
+      {
+        label: 'Leaf Radial Bias',
+        min: 0.1,
+        max: 2,
+        step: 0.1,
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'useLOD',
+      {
+        label: 'Use LOD',
+        onChange: () => {
+          this.updateLeaves();
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'lodDistance',
+      {
+        label: 'LOD Distance',
+        min: 5,
+        max: 30,
+        step: 1,
+        onChange: () => {
+          if (this.params.useLOD) {
+            this.updateLeaves();
+          }
+        },
+      },
+      folder,
+    );
   }
 
   destroy() {
@@ -226,5 +649,23 @@ export default class Erdtree {
     });
     this.shaderMaterial?.dispose();
     this.scene.remove(this.model);
+
+    if (this.instancedLeaves) {
+      this.instancedLeaves.geometry?.dispose();
+      this.instancedLeaves.material?.dispose();
+      this.instancedLeaves.dispose();
+      this.scene.remove(this.instancedLeaves);
+    }
+
+    if (this.leafLOD) {
+      this.leafLOD.levels.forEach(level => {
+        if (level.object) {
+          level.object.geometry?.dispose();
+          level.object.material?.dispose();
+          level.object.dispose();
+        }
+      });
+      this.scene.remove(this.leafLOD);
+    }
   }
 }
