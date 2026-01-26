@@ -50,7 +50,7 @@ export default class CompositePass {
   createBloomComposite() {
     const shader = {
       uniforms: {
-        bloomTexture: { value: this.bloomPass.composer.renderTarget2.texture },
+        bloomTexture: { value: null },
       },
       vertexShader: vertexShader,
       fragmentShader: `
@@ -124,7 +124,7 @@ export default class CompositePass {
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       uniforms: {
-        bloomTexture: { value: this.bloomPass.composer.renderTarget2.texture },
+        bloomTexture: { value: null },
         glowTexture: { value: null },
         uTime: { value: 0 },
         uMeshCenter: { value: new THREE.Vector2(0.5, 0.5) },
@@ -165,8 +165,7 @@ export default class CompositePass {
 
   renderBloom() {
     if (!this.params.bloomEnabled) return;
-    this.bloomMaterial.uniforms.bloomTexture.value =
-      this.bloomPass.composer.renderTarget2.texture;
+    this.bloomMaterial.uniforms.bloomTexture.value = this.bloomPass.renderTarget.texture;
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.bloomScene, this.camera);
   }
@@ -179,7 +178,7 @@ export default class CompositePass {
   }
 
   renderCombined() {
-    this.combinedMaterial.uniforms.bloomTexture.value = this.bloomPass.composer.renderTarget2.texture;
+    this.combinedMaterial.uniforms.bloomTexture.value = this.bloomPass.renderTarget.texture;
     this.combinedMaterial.uniforms.glowTexture.value = this.glowPass.renderTarget.texture;
     this.combinedMaterial.uniforms.uTime.value = this.time.elapsed;
     this.combinedMaterial.uniforms.bloomEnabled.value = this.params.bloomEnabled;

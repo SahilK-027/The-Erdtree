@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import Game from '../../Game.class';
+import vertexShader from '../../../Shaders/Bloom/vertex.glsl';
+import fragmentBlur from '../../../Shaders/Bloom/fragmentBlur.glsl';
+import fragmentThreshold from '../../../Shaders/Bloom/fragmentThreshold.glsl';
 
 export default class BloomPass {
   constructor() {
@@ -16,56 +16,132 @@ export default class BloomPass {
 
     this.params = {
       strength: 0.01,
-      radius: 0.4,
+      radius: 1.0,
       threshold: 0.0,
+      smoothing: 0.1,
+      iterations: 2, // Number of blur passes (2 = 4 total passes)
     };
 
-    this.createRenderTarget();
-    this.createComposer();
+    this.createRenderTargets();
+    this.createMaterials();
+    this.createScene();
 
     if (this.isDebugEnabled) {
       this.initTweakPane();
     }
   }
 
-  createRenderTarget() {
-    this.renderTarget = new THREE.WebGLRenderTarget(
-      this.sizes.width,
-      this.sizes.height,
-      {
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter,
-        format: THREE.RGBAFormat,
-      }
-    );
+  createRenderTargets() {
+    // OPTIMIZATION: Render bloom at lower resolution
+    const bloomResolutionScale = 0.5;
+    const width = Math.floor(this.sizes.width * bloomResolutionScale);
+    const height = Math.floor(this.sizes.height * bloomResolutionScale);
+    
+    this.bloomResolutionScale = bloomResolutionScale;
+
+    const rtOptions = {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType,
+    };
+
+    // Ping-pong render targets for blur passes
+    this.renderTarget1 = new THREE.WebGLRenderTarget(width, height, rtOptions);
+    this.renderTarget2 = new THREE.WebGLRenderTarget(width, height, rtOptions);
+    
+    // Final output target
+    this.renderTarget = this.renderTarget2;
   }
 
-  createComposer() {
-    this.composer = new EffectComposer(this.renderer, this.renderTarget);
-    this.composer.renderToScreen = false;
+  createMaterials() {
+    // Threshold material
+    this.thresholdMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        tDiffuse: { value: null },
+        uThreshold: { value: this.params.threshold },
+        uSmoothing: { value: this.params.smoothing },
+      },
+      vertexShader: vertexShader,
+      fragmentShader: fragmentThreshold,
+    });
 
-    // Render pass
-    this.renderPass = new RenderPass(this.scene, this.camera);
-    this.composer.addPass(this.renderPass);
+    // Blur material
+    this.blurMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        tDiffuse: { value: null },
+        uResolution: { value: new THREE.Vector2(
+          Math.floor(this.sizes.width * this.bloomResolutionScale),
+          Math.floor(this.sizes.height * this.bloomResolutionScale)
+        )},
+        uDirection: { value: new THREE.Vector2(1, 0) },
+        uStrength: { value: this.params.strength },
+      },
+      vertexShader: vertexShader,
+      fragmentShader: fragmentBlur,
+    });
+  }
 
-    // Bloom pass
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(this.sizes.width, this.sizes.height),
-      this.params.strength,
-      this.params.radius,
-      this.params.threshold
+  createScene() {
+    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.scene = new THREE.Scene();
+    
+    this.quad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      this.thresholdMaterial
     );
-    this.composer.addPass(this.bloomPass);
+    this.scene.add(this.quad);
   }
 
   render() {
-    this.composer.render();
+    // Input is already in renderTarget1 from the pipeline
+    // PASS 1: Apply threshold to isolate bright areas
+    this.quad.material = this.thresholdMaterial;
+    this.thresholdMaterial.uniforms.tDiffuse.value = this.renderTarget1.texture;
+    this.thresholdMaterial.uniforms.uThreshold.value = this.params.threshold;
+    this.thresholdMaterial.uniforms.uSmoothing.value = this.params.smoothing;
+    
+    this.renderer.setRenderTarget(this.renderTarget2);
+    this.renderer.render(this.scene, this.camera);
+
+    // PASS 2-N: Ping-pong blur passes
+    this.quad.material = this.blurMaterial;
+    this.blurMaterial.uniforms.uStrength.value = this.params.strength;
+    
+    let readTarget = this.renderTarget2;
+    let writeTarget = this.renderTarget1;
+    
+    for (let i = 0; i < this.params.iterations; i++) {
+      // Horizontal blur
+      this.blurMaterial.uniforms.tDiffuse.value = readTarget.texture;
+      this.blurMaterial.uniforms.uDirection.value.set(this.params.radius, 0);
+      this.renderer.setRenderTarget(writeTarget);
+      this.renderer.render(this.scene, this.camera);
+      
+      // Swap targets
+      [readTarget, writeTarget] = [writeTarget, readTarget];
+      
+      // Vertical blur
+      this.blurMaterial.uniforms.tDiffuse.value = readTarget.texture;
+      this.blurMaterial.uniforms.uDirection.value.set(0, this.params.radius);
+      this.renderer.setRenderTarget(writeTarget);
+      this.renderer.render(this.scene, this.camera);
+      
+      // Swap targets
+      [readTarget, writeTarget] = [writeTarget, readTarget];
+    }
+    
+    // Final result is in readTarget
+    this.renderTarget = readTarget;
   }
 
   resize() {
-    this.renderTarget.setSize(this.sizes.width, this.sizes.height);
-    this.composer.setSize(this.sizes.width, this.sizes.height);
-    this.bloomPass.resolution.set(this.sizes.width, this.sizes.height);
+    const width = Math.floor(this.sizes.width * this.bloomResolutionScale);
+    const height = Math.floor(this.sizes.height * this.bloomResolutionScale);
+    
+    this.renderTarget1.setSize(width, height);
+    this.renderTarget2.setSize(width, height);
+    this.blurMaterial.uniforms.uResolution.value.set(width, height);
   }
 
   initTweakPane() {
@@ -76,15 +152,13 @@ export default class BloomPass {
       min: 0,
       max: 5,
       step: 0.01,
-      onChange: (v) => { this.bloomPass.strength = v; },
     }, folder);
 
     this.debug.add(this.params, 'radius', {
       label: 'Radius',
       min: 0,
-      max: 2,
-      step: 0.01,
-      onChange: (v) => { this.bloomPass.radius = v; },
+      max: 3,
+      step: 0.1,
     }, folder);
 
     this.debug.add(this.params, 'threshold', {
@@ -92,12 +166,35 @@ export default class BloomPass {
       min: 0,
       max: 1,
       step: 0.01,
-      onChange: (v) => { this.bloomPass.threshold = v; },
+    }, folder);
+    
+    this.debug.add(this.params, 'smoothing', {
+      label: 'Smoothing',
+      min: 0,
+      max: 0.5,
+      step: 0.01,
+    }, folder);
+    
+    this.debug.add(this.params, 'iterations', {
+      label: 'Iterations',
+      min: 1,
+      max: 4,
+      step: 1,
+    }, folder);
+    
+    // Performance monitoring
+    const totalPasses = 1 + (this.params.iterations * 2); // threshold + (h+v blur) * iterations
+    this.debug.add({ passes: totalPasses }, 'passes', {
+      label: 'Bloom Passes',
+      readonly: true,
     }, folder);
   }
 
   destroy() {
-    this.renderTarget.dispose();
-    this.composer.dispose();
+    this.renderTarget1.dispose();
+    this.renderTarget2.dispose();
+    this.thresholdMaterial.dispose();
+    this.blurMaterial.dispose();
+    this.quad.geometry.dispose();
   }
 }

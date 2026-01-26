@@ -46,8 +46,13 @@ export default class RenderPipeline {
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
 
-    // PASS 2: Render bloom layer with bloom effect
+    // PASS 2: Render bloom layer to temporary target, then apply bloom effect
     this.setCameraToLayers(PASS_CONFIG.BLOOM_RENDER);
+    this.renderer.setRenderTarget(this.postProcessing.bloomPass.renderTarget1);
+    this.renderer.clear();
+    this.renderer.render(this.scene, this.camera);
+    
+    // Apply bloom post-processing
     this.postProcessing.bloomPass.render();
 
     // PASS 3: Render the entire scene normally to the screen
