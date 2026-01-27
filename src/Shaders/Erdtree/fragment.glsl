@@ -19,8 +19,16 @@ void main() {
   // Fresnel effect for rim lighting
   float fresnel = pow(1.0 - abs(dot(normal, viewDir)), uFresnelPower);
   
-  // Vertical fade for trunk (bottom half fades out)
-  float heightFade = smoothstep(uTrunkFadeStart, uTrunkFadeEnd, vHeight);
+  // Calculate distance from center (trunk axis)
+  float distanceFromCenter = length(vWorldPosition.xz);
+  
+  // Elliptical fade: edges stay visible longer
+  // The fade threshold increases with distance from center
+  float ellipticalOffset = distanceFromCenter * 0.1;
+  float adjustedHeight = vHeight - ellipticalOffset;
+  
+  // Vertical fade for trunk with elliptical shape
+  float heightFade = smoothstep(uTrunkFadeStart, uTrunkFadeEnd, adjustedHeight);
   
   // Base color with fresnel
   vec3 color = mix(uBaseColor, uFresnelColor, fresnel * uFresnelIntensity);

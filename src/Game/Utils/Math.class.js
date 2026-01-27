@@ -1,7 +1,7 @@
 import MersenneTwister from 'mersennetwister';
 import * as THREE from 'three';
 
-const MT_ = new MersenneTwister(7);
+const MT_ = new MersenneTwister(1);
 
 function saturate(v) {
   return Math.min(1, Math.max(0, v));

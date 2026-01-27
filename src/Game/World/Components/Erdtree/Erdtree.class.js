@@ -3,6 +3,7 @@ import Game from '../../../Game.class';
 import { LAYERS } from '../../../PostProcessing/LayerConfig.util';
 import vertexShaderErdTree from '../../../../Shaders/Erdtree/vertex.glsl';
 import fragmentShaderErdTree from '../../../../Shaders/Erdtree/fragment.glsl';
+import * as MATH from '../../../Utils/Math.class';
 
 export default class Erdtree {
   constructor() {
@@ -19,17 +20,16 @@ export default class Erdtree {
       fresnelColor: '#e8d2b1',
       fresnelPower: 1.0,
       fresnelIntensity: 1.5,
-      trunkFadeStart: -1.0,
-      trunkFadeEnd: 0.5,
+      trunkFadeStart: 0.2,
+      trunkFadeEnd: 0.7,
       trunkOpacity: 0.2,
       glowIntensity: 0.8,
-      leafCount: 7000,
+      leafCount: 8000,
       leafScale: 0.035,
       leafMinHeight: 0.5,
-      leafRandomness: 0.3,
+      leafRandomness: 0.01,
       leafNormalOffset: 0.1,
       leafRadialBias: 0.7,
-      useLOD: true,
       lodDistance: 10,
     };
 
@@ -106,7 +106,7 @@ export default class Erdtree {
     // Clone and optimize material
     leafMaterial = leafMaterial.clone();
     leafMaterial.side = THREE.FrontSide; // Only render front faces
-    
+
     // Sample positions from erdtree mesh
     const positions = this.samplePositionsOnTree(this.params.leafCount);
 
@@ -114,7 +114,7 @@ export default class Erdtree {
     this.instancedLeaves = new THREE.InstancedMesh(
       leafGeometry,
       leafMaterial,
-      this.params.leafCount
+      this.params.leafCount,
     );
 
     // Performance optimizations
@@ -133,14 +133,14 @@ export default class Erdtree {
 
       // Random rotation for variety
       rotation.set(
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2
+        MATH.random() * Math.PI * 2,
+        MATH.random() * Math.PI * 2,
+        MATH.random() * Math.PI * 2,
       );
       quaternion.setFromEuler(rotation);
 
       // Scale with slight randomness
-      const scaleValue = this.params.leafScale * (0.8 + Math.random() * 0.4);
+      const scaleValue = this.params.leafScale * (0.8 + MATH.random() * 0.4);
       scale.set(scaleValue, scaleValue, scaleValue);
 
       matrix.compose(position, quaternion, scale);
@@ -149,40 +149,11 @@ export default class Erdtree {
 
     this.instancedLeaves.instanceMatrix.needsUpdate = true;
     this.instancedLeaves.layers.set(LAYERS.BLOOM);
-    
+
     // Compute bounding sphere for better frustum culling
     this.instancedLeaves.computeBoundingSphere();
-    
+
     this.scene.add(this.instancedLeaves);
-
-    // Setup LOD if enabled
-    if (this.params.useLOD) {
-      this.setupLOD();
-    }
-  }
-
-  setupLOD() {
-    // Create LOD group
-    if (this.leafLOD) {
-      this.scene.remove(this.leafLOD);
-    }
-
-    this.leafLOD = new THREE.LOD();
-    
-    // Move instanced mesh to LOD
-    if (this.instancedLeaves) {
-      this.scene.remove(this.instancedLeaves);
-      this.leafLOD.addLevel(this.instancedLeaves, 0);
-      
-      // Create lower detail version (fewer instances visible)
-      const lowDetailCount = Math.floor(this.params.leafCount * 0.3);
-      const lowDetailMesh = this.createLowDetailLeaves(lowDetailCount);
-      if (lowDetailMesh) {
-        this.leafLOD.addLevel(lowDetailMesh, this.params.lodDistance);
-      }
-    }
-    
-    this.scene.add(this.leafLOD);
   }
 
   createLowDetailLeaves(count) {
@@ -191,11 +162,7 @@ export default class Erdtree {
     const geometry = this.instancedLeaves.geometry;
     const material = this.instancedLeaves.material;
 
-    const lowDetailMesh = new THREE.InstancedMesh(
-      geometry,
-      material,
-      count
-    );
+    const lowDetailMesh = new THREE.InstancedMesh(geometry, material, count);
 
     lowDetailMesh.frustumCulled = true;
     lowDetailMesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
@@ -219,7 +186,7 @@ export default class Erdtree {
 
   samplePositionsOnTree(count) {
     const positions = [];
-    
+
     // Reuse objects to reduce GC pressure
     const tempPosition = new THREE.Vector3();
     const tempNormal = new THREE.Vector3();
@@ -241,7 +208,7 @@ export default class Erdtree {
     if (meshes.length === 0) return positions;
 
     // Pre-calculate mesh weights based on surface area for better distribution
-    const meshWeights = meshes.map(mesh => {
+    const meshWeights = meshes.map((mesh) => {
       const posAttr = mesh.geometry.attributes.position;
       return posAttr ? posAttr.count : 0;
     });
@@ -255,7 +222,7 @@ export default class Erdtree {
       attempts++;
 
       // Pick a random mesh weighted by surface area
-      let random = Math.random() * totalWeight;
+      let random = MATH.random() * totalWeight;
       let meshIndex = 0;
       for (let j = 0; j < meshWeights.length; j++) {
         random -= meshWeights[j];
@@ -274,7 +241,7 @@ export default class Erdtree {
 
       // Pick a random triangle
       const triangleCount = Math.floor(positionAttribute.count / 3);
-      const triangleIndex = Math.floor(Math.random() * triangleCount) * 3;
+      const triangleIndex = Math.floor(MATH.random() * triangleCount) * 3;
 
       // Get triangle vertices (reuse vectors)
       v1.fromBufferAttribute(positionAttribute, triangleIndex);
@@ -293,8 +260,8 @@ export default class Erdtree {
       }
 
       // Random barycentric coordinates with bias toward edges
-      const r1 = Math.pow(Math.random(), this.params.leafRadialBias);
-      const r2 = Math.pow(Math.random(), this.params.leafRadialBias);
+      const r1 = Math.pow(MATH.random(), this.params.leafRadialBias);
+      const r2 = Math.pow(MATH.random(), this.params.leafRadialBias);
       const sqrtR1 = Math.sqrt(r1);
       const w1 = 1 - sqrtR1;
       const w2 = sqrtR1 * (1 - r2);
@@ -304,14 +271,14 @@ export default class Erdtree {
       tempPosition.set(
         v1.x * w1 + v2.x * w2 + v3.x * w3,
         v1.y * w1 + v2.y * w2 + v3.y * w3,
-        v1.z * w1 + v2.z * w2 + v3.z * w3
+        v1.z * w1 + v2.z * w2 + v3.z * w3,
       );
 
       // Interpolate normal
       tempNormal.set(
         n1.x * w1 + n2.x * w2 + n3.x * w3,
         n1.y * w1 + n2.y * w2 + n3.y * w3,
-        n1.z * w1 + n2.z * w2 + n3.z * w3
+        n1.z * w1 + n2.z * w2 + n3.z * w3,
       );
       tempNormal.normalize();
 
@@ -320,19 +287,27 @@ export default class Erdtree {
       tempNormal.transformDirection(mesh.matrixWorld);
 
       // Calculate distance from center (trunk)
-      const distanceFromCenter = Math.sqrt(tempPosition.x * tempPosition.x + tempPosition.z * tempPosition.z);
+      const distanceFromCenter = Math.sqrt(
+        tempPosition.x * tempPosition.x + tempPosition.z * tempPosition.z,
+      );
 
       // Filter by height and distance (favor outer branches)
-      if (tempPosition.y >= this.params.leafMinHeight && distanceFromCenter > 0.2) {
+      // Allow leaves closer to center at higher Y positions (top of tree)
+      const minDistanceAtHeight = Math.max(0, 0.2 - (tempPosition.y - this.params.leafMinHeight) * 0.15);
+      
+      if (
+        tempPosition.y >= this.params.leafMinHeight &&
+        distanceFromCenter > minDistanceAtHeight
+      ) {
         // Offset along normal (push leaves away from surface)
         tempPosition.x += tempNormal.x * this.params.leafNormalOffset;
         tempPosition.y += tempNormal.y * this.params.leafNormalOffset;
         tempPosition.z += tempNormal.z * this.params.leafNormalOffset;
 
         // Add some randomness to position
-        tempPosition.x += (Math.random() - 0.5) * this.params.leafRandomness;
-        tempPosition.y += (Math.random() - 0.5) * this.params.leafRandomness;
-        tempPosition.z += (Math.random() - 0.5) * this.params.leafRandomness;
+        tempPosition.x += (MATH.random() - 0.5) * this.params.leafRandomness;
+        tempPosition.y += (MATH.random() - 0.5) * this.params.leafRandomness;
+        tempPosition.z += (MATH.random() - 0.5) * this.params.leafRandomness;
 
         positions.push(tempPosition.clone());
       } else {
@@ -354,7 +329,7 @@ export default class Erdtree {
     if (this.leafLOD) {
       this.scene.remove(this.leafLOD);
       // Dispose LOD levels
-      this.leafLOD.levels.forEach(level => {
+      this.leafLOD.levels.forEach((level) => {
         if (level.object && level.object !== this.instancedLeaves) {
           level.object.geometry?.dispose();
           level.object.material?.dispose();
@@ -610,35 +585,6 @@ export default class Erdtree {
       },
       folder,
     );
-
-    this.debug.add(
-      this.params,
-      'useLOD',
-      {
-        label: 'Use LOD',
-        onChange: () => {
-          this.updateLeaves();
-        },
-      },
-      folder,
-    );
-
-    this.debug.add(
-      this.params,
-      'lodDistance',
-      {
-        label: 'LOD Distance',
-        min: 5,
-        max: 30,
-        step: 1,
-        onChange: () => {
-          if (this.params.useLOD) {
-            this.updateLeaves();
-          }
-        },
-      },
-      folder,
-    );
   }
 
   destroy() {
@@ -658,7 +604,7 @@ export default class Erdtree {
     }
 
     if (this.leafLOD) {
-      this.leafLOD.levels.forEach(level => {
+      this.leafLOD.levels.forEach((level) => {
         if (level.object) {
           level.object.geometry?.dispose();
           level.object.material?.dispose();
