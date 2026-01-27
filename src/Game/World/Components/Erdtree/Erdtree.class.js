@@ -4,6 +4,7 @@ import { LAYERS } from '../../../PostProcessing/LayerConfig.util';
 import vertexShaderErdTree from '../../../../Shaders/Erdtree/vertex.glsl';
 import fragmentShaderErdTree from '../../../../Shaders/Erdtree/fragment.glsl';
 import * as MATH from '../../../Utils/Math.class';
+import LeavesMaterial from '../Leaves/Leaves.class';
 
 export default class Erdtree {
   constructor() {
@@ -21,17 +22,20 @@ export default class Erdtree {
       fresnelPower: 1.0,
       fresnelIntensity: 1.5,
       trunkFadeStart: 0.2,
-      trunkFadeEnd: 0.7,
+      trunkFadeEnd: 0.5,
       trunkOpacity: 0.2,
       glowIntensity: 0.8,
       leafCount: 8000,
       leafScale: 0.035,
-      leafMinHeight: 0.5,
+      leafMinHeight: 0.7,
       leafRandomness: 0.01,
-      leafNormalOffset: 0.1,
+      leafNormalOffset: 0.15,
       leafRadialBias: 0.7,
       lodDistance: 10,
     };
+
+    // Initialize leaf material
+    this.leavesMaterial = new LeavesMaterial(this.debug, this.isDebugEnabled);
 
     this.setup();
 
@@ -76,7 +80,6 @@ export default class Erdtree {
       fragmentShader: fragmentShaderErdTree,
       transparent: true,
       side: THREE.DoubleSide,
-      depthWrite: false,
     });
   }
 
@@ -103,9 +106,8 @@ export default class Erdtree {
       return;
     }
 
-    // Clone and optimize material
-    leafMaterial = leafMaterial.clone();
-    leafMaterial.side = THREE.FrontSide; // Only render front faces
+    // Use custom shader material for leaves
+    leafMaterial = this.leavesMaterial.material;
 
     // Sample positions from erdtree mesh
     const positions = this.samplePositionsOnTree(this.params.leafCount);
@@ -323,7 +325,6 @@ export default class Erdtree {
     if (this.instancedLeaves) {
       this.scene.remove(this.instancedLeaves);
       this.instancedLeaves.geometry?.dispose();
-      this.instancedLeaves.material?.dispose();
       this.instancedLeaves.dispose();
     }
     if (this.leafLOD) {
@@ -332,7 +333,6 @@ export default class Erdtree {
       this.leafLOD.levels.forEach((level) => {
         if (level.object && level.object !== this.instancedLeaves) {
           level.object.geometry?.dispose();
-          level.object.material?.dispose();
           level.object.dispose();
         }
       });
@@ -598,7 +598,6 @@ export default class Erdtree {
 
     if (this.instancedLeaves) {
       this.instancedLeaves.geometry?.dispose();
-      this.instancedLeaves.material?.dispose();
       this.instancedLeaves.dispose();
       this.scene.remove(this.instancedLeaves);
     }
@@ -607,11 +606,13 @@ export default class Erdtree {
       this.leafLOD.levels.forEach((level) => {
         if (level.object) {
           level.object.geometry?.dispose();
-          level.object.material?.dispose();
           level.object.dispose();
         }
       });
       this.scene.remove(this.leafLOD);
     }
+
+    // Dispose leaf material
+    this.leavesMaterial?.dispose();
   }
 }

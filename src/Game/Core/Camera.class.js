@@ -14,7 +14,7 @@ export default class Camera {
     this.params = { fov, near, far };
 
     // Erdtree focal point - look at the trunk/lower canopy
-    this.targetPoint = new THREE.Vector3(0, 0.7, 0);
+    this.targetPoint = new THREE.Vector3(0, 0.8, 0);
 
     this.setPerspectiveCameraInstance(fov, near, far);
     this.setOrbitControls();
@@ -34,7 +34,7 @@ export default class Camera {
     );
 
     // Cinematic low-angle hero shot - close and looking up
-    this.cameraInstance.position.set(1.5, 0.85, 1.9);
+    this.cameraInstance.position.set(1.5, 0.6, 1.9);
     this.scene.add(this.cameraInstance);
   }
 
@@ -48,7 +48,7 @@ export default class Camera {
 
     // Cinematic constraints - allow looking up at the tree
     this.controls.minPolarAngle = Math.PI / 8; // Can look up high
-    this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
+    // this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
 
     // Distance constraints - keep it intimate
     // this.controls.minDistance = 1;

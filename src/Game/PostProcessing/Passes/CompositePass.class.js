@@ -16,7 +16,7 @@ export default class CompositePass {
     this.glowPass = glowPass;
 
     this.colorParams = {
-      color: '#ffe5b8',
+      color: '#c5b16d',
     };
 
     this.params = {
