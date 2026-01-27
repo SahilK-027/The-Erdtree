@@ -8,11 +8,11 @@ export default class LeavesMaterial {
     this.isDebugEnabled = isDebugEnabled;
 
     this.params = {
-      baseColor: '#c8b239', // Rich golden
+      baseColor: '#eed258', // Rich golden
       tipColor: '#f4d56f', // Bright golden yellow
-      backlitColor: '#ffe8a3', // Very bright warm yellow for translucency
-      shadowColor: '#8a6b2f', // Darker warm brown for shadows
-      emissiveStrength: 0.4, // Luminous quality
+      backlitColor: '#dbcaa9', // Very bright warm yellow for translucency
+      shadowColor: '#e5e0d1', // Darker warm brown for shadows
+      emissiveStrength: 0.25, // Luminous quality
       translucency: 0.1, // Subsurface scattering strength
       colorVariation: 0.8, // Per-leaf color randomness
       glowIntensity: 0.2, // Edge glow
