@@ -17,6 +17,7 @@ export default class Erdtree {
     this.params = {
       scale: 1,
       positionY: -0.1,
+      rotationY: 4.25,
       baseColor: '#918869',
       fresnelColor: '#cbc5a2',
       fresnelPower: 1.0,
@@ -49,13 +50,13 @@ export default class Erdtree {
       console.error('Resources not available:', this.resources);
       return;
     }
-    
+
     const gltf = this.resources.items.erdtreeModel;
     if (!gltf) {
       console.error('Erdtree model not loaded');
       return;
     }
-    
+
     this.model = gltf.scene;
 
     this.createShaderMaterial();
@@ -69,6 +70,11 @@ export default class Erdtree {
 
     this.model.scale.setScalar(this.params.scale);
     this.model.position.y = this.params.positionY;
+    this.model.rotation.set(
+      0,
+      this.params.rotationY,
+      0,
+    );
     this.scene.add(this.model);
 
     this.createInstancedLeaves();
@@ -131,7 +137,7 @@ export default class Erdtree {
 
     // Performance optimizations
     this.instancedLeaves.frustumCulled = true; // Enable frustum culling
-    this.instancedLeaves.instanceMatrix.setUsage(THREE.StaticDrawUsage); // Static since leaves don't move
+    this.instancedLeaves.instanceMatrix.setUsage(THREE.StaticDrawUsage); // Static - animation is in shader
 
     // Set up instances
     const matrix = new THREE.Matrix4();
@@ -305,8 +311,11 @@ export default class Erdtree {
 
       // Filter by height and distance (favor outer branches)
       // Allow leaves closer to center at higher Y positions (top of tree)
-      const minDistanceAtHeight = Math.max(0, 0.2 - (tempPosition.y - this.params.leafMinHeight) * 0.15);
-      
+      const minDistanceAtHeight = Math.max(
+        0,
+        0.2 - (tempPosition.y - this.params.leafMinHeight) * 0.15,
+      );
+
       if (
         tempPosition.y >= this.params.leafMinHeight &&
         distanceFromCenter > minDistanceAtHeight
@@ -352,6 +361,11 @@ export default class Erdtree {
   }
 
   update() {
+    // Update leaves animation
+    if (this.leavesMaterial && this.game.time) {
+      this.leavesMaterial.update(this.game.time.elapsed);
+    }
+
     // Update LOD based on camera distance
     if (this.leafLOD && this.game.camera) {
       this.leafLOD.update(this.game.camera.cameraInstance);
@@ -386,6 +400,21 @@ export default class Erdtree {
         step: 0.1,
         onChange: (v) => {
           this.model.position.y = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'rotationY',
+      {
+        label: 'Rotation Y',
+        min: 0,
+        max: 6.28,
+        step: 0.01,
+        onChange: (v) => {
+          this.model.rotation.y = v;
         },
       },
       folder,

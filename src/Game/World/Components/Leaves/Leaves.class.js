@@ -25,6 +25,14 @@ export default class LeavesMaterial {
       lightDirectionX: 0.5,
       lightDirectionY: 1.0,
       lightDirectionZ: 0.3,
+      // Wind animation parameters
+      windStrength: 0.2,
+      windSpeed: 1.5,
+      windDirectionX: 1.0,
+      windDirectionZ: 0.5,
+      gustStrength: 0.3,
+      gustFrequency: 0.6,
+      swayVariation: 1.5,
     };
 
     this.material = this.createMaterial();
@@ -37,6 +45,7 @@ export default class LeavesMaterial {
   createMaterial() {
     const material = new THREE.ShaderMaterial({
       uniforms: {
+        uTime: { value: 0 },
         uLightDirection: {
           value: new THREE.Vector3(
             this.params.lightDirectionX,
@@ -58,6 +67,13 @@ export default class LeavesMaterial {
         uSubsurfaceScale: { value: this.params.subsurfaceScale },
         uAmbientStrength: { value: this.params.ambientStrength },
         uWrapLighting: { value: this.params.wrapLighting },
+        // Wind uniforms
+        uWindStrength: { value: this.params.windStrength },
+        uWindSpeed: { value: this.params.windSpeed },
+        uWindDirection: { value: new THREE.Vector2(this.params.windDirectionX, this.params.windDirectionZ) },
+        uGustStrength: { value: this.params.gustStrength },
+        uGustFrequency: { value: this.params.gustFrequency },
+        uSwayVariation: { value: this.params.swayVariation },
       },
       vertexShader,
       fragmentShader,
@@ -77,6 +93,14 @@ export default class LeavesMaterial {
         this.params.lightDirectionZ,
       )
       .normalize();
+  }
+
+  update(time) {
+    this.material.uniforms.uTime.value = time;
+    // Debug: uncomment to verify updates
+    // if (Math.floor(time) % 5 === 0 && Math.floor(time * 10) % 10 === 0) {
+    //   console.log('Leaves time:', time);
+    // }
   }
 
   initTweakPane() {
@@ -320,6 +344,82 @@ export default class LeavesMaterial {
         step: 0.1,
         onChange: () => {
           this.updateLightDirection();
+        },
+      },
+      folder,
+    );
+
+    // Wind controls
+    this.debug.add(
+      this.params,
+      'windStrength',
+      {
+        label: 'Wind Strength',
+        min: 0,
+        max: 2,
+        step: 0.05,
+        onChange: (v) => {
+          this.material.uniforms.uWindStrength.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'windSpeed',
+      {
+        label: 'Wind Speed',
+        min: 0,
+        max: 3,
+        step: 0.1,
+        onChange: (v) => {
+          this.material.uniforms.uWindSpeed.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'gustStrength',
+      {
+        label: 'Gust Strength',
+        min: 0,
+        max: 1,
+        step: 0.05,
+        onChange: (v) => {
+          this.material.uniforms.uGustStrength.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'gustFrequency',
+      {
+        label: 'Gust Frequency',
+        min: 0,
+        max: 2,
+        step: 0.1,
+        onChange: (v) => {
+          this.material.uniforms.uGustFrequency.value = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'swayVariation',
+      {
+        label: 'Sway Variation',
+        min: 0,
+        max: 2,
+        step: 0.1,
+        onChange: (v) => {
+          this.material.uniforms.uSwayVariation.value = v;
         },
       },
       folder,
