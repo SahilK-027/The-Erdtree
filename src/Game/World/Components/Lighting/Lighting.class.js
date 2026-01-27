@@ -58,5 +58,7 @@ export default class Lighting {
     this.environmentMap.texture.colorSpace = THREE.SRGBColorSpace;
     this.environmentMap.updateMaterials();
     this.scene.environment = this.environmentMap.texture;
+    this.scene.background = this.environmentMap.texture;
+    this.scene.rotation.set(0, 4.5, 0);
   }
 }

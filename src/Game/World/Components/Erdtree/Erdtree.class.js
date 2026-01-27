@@ -25,7 +25,7 @@ export default class Erdtree {
       trunkFadeEnd: 0.5,
       trunkOpacity: 0.2,
       glowIntensity: 0.8,
-      leafCount: 10000,
+      leafCount: 16000,
       leafScale: 0.02,
       leafMinHeight: 0.75,
       leafRandomness: 0.01,
