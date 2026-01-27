@@ -34,7 +34,7 @@ export default class Camera {
     );
 
     // Cinematic low-angle hero shot - close and looking up
-    this.cameraInstance.position.set(1.5, 0.6, 1.9);
+    this.cameraInstance.position.set(1.5, 1.0, 1.9);
     this.scene.add(this.cameraInstance);
   }
 
@@ -48,7 +48,7 @@ export default class Camera {
 
     // Cinematic constraints - allow looking up at the tree
     this.controls.minPolarAngle = Math.PI / 8; // Can look up high
-    // this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
+    this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
 
     // Distance constraints - keep it intimate
     // this.controls.minDistance = 1;

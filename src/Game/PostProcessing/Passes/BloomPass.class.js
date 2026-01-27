@@ -15,7 +15,7 @@ export default class BloomPass {
     this.isDebugEnabled = this.game.isDebugEnabled;
 
     this.params = {
-      strength: 0.8,
+      strength: 0.9,
       radius: 1.0,
       threshold: 0.0,
       smoothing: 0.1,

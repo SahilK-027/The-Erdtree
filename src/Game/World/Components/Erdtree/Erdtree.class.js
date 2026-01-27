@@ -25,7 +25,7 @@ export default class Erdtree {
       trunkFadeEnd: 0.5,
       trunkOpacity: 0.2,
       glowIntensity: 0.8,
-      leafCount: 10000,
+      leafCount: 16000,
       leafScale: 0.02,
       leafMinHeight: 0.75,
       leafRandomness: 0.01,
@@ -45,7 +45,17 @@ export default class Erdtree {
   }
 
   setup() {
+    if (!this.resources || !this.resources.items) {
+      console.error('Resources not available:', this.resources);
+      return;
+    }
+    
     const gltf = this.resources.items.erdtreeModel;
+    if (!gltf) {
+      console.error('Erdtree model not loaded');
+      return;
+    }
+    
     this.model = gltf.scene;
 
     this.createShaderMaterial();
