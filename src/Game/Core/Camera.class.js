@@ -14,7 +14,7 @@ export default class Camera {
     this.params = { fov, near, far };
 
     // Erdtree focal point - look at the trunk/lower canopy
-    this.targetPoint = new THREE.Vector3(0, 0.8, 0);
+    this.targetPoint = new THREE.Vector3(0, 0.85, 0);
 
     this.setPerspectiveCameraInstance(fov, near, far);
     this.setOrbitControls();
@@ -34,7 +34,7 @@ export default class Camera {
     );
 
     // Cinematic low-angle hero shot - close and looking up
-    this.cameraInstance.position.set(1.5, 1.0, 1.9);
+    this.cameraInstance.position.set(1.5, 0.9, 1.9);
     this.scene.add(this.cameraInstance);
   }
 

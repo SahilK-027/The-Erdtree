@@ -15,9 +15,9 @@ export default class Erdtree {
     this.isDebugEnabled = this.game.isDebugEnabled;
 
     this.params = {
-      scale: 1,
+      scale: 1.125,
       positionY: -0.1,
-      rotationY: 4.25,
+      rotationY: 1.4,
       baseColor: '#918869',
       fresnelColor: '#cbc5a2',
       fresnelPower: 1.0,
