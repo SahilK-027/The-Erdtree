@@ -45,7 +45,17 @@ export default class Erdtree {
   }
 
   setup() {
+    if (!this.resources || !this.resources.items) {
+      console.error('Resources not available:', this.resources);
+      return;
+    }
+    
     const gltf = this.resources.items.erdtreeModel;
+    if (!gltf) {
+      console.error('Erdtree model not loaded');
+      return;
+    }
+    
     this.model = gltf.scene;
 
     this.createShaderMaterial();
