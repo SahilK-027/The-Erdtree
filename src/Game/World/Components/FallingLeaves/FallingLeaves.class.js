@@ -7,11 +7,11 @@ export default class FallingLeaves {
     const leaf = this.game.resources.items.leafModel;
     const leafGeometry = leaf.scene.children[0].geometry;
     const tree1Bounds = {
-      yMin: 15,
+      yMin: 20,
       yMax: 30,
       xRange: 2.5,
       zRange: 2.5,
-      originX: 8,
+      originX: 0,
       originZ: 0,
     };
     this.fallingLeavesSystem = new FallingLeavesSystem(

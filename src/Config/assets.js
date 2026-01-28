@@ -31,6 +31,21 @@ const ASSETS = [
     type: 'texture',
     path: '/assets/textures/smoke/smoke.png',
   },
+  {
+    id: 'groundDiffuseMap',
+    type: 'texture',
+    path: '/assets/textures/ground/brown_mud_leaves_01_diff_1k.jpg',
+  },
+  {
+    id: 'groundNormalMap',
+    type: 'texture',
+    path: '/assets/textures/ground/brown_mud_leaves_01_nor_dx_1k.jpg',
+  },
+  {
+    id: 'groundAOMap',
+    type: 'texture',
+    path: '/assets/textures/ground/brown_mud_leaves_01_ao_1k.jpg',
+  },
 ];
 
 export default ASSETS;

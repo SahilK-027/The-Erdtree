@@ -12,7 +12,7 @@ export default class World {
     this.game = Game.getInstance();
     this.scene = this.game.scene;
 
-    this.scene.fog = new THREE.FogExp2(0x10271f, 0.055);
+    this.scene.fog = new THREE.FogExp2(0x10271f, 0.1);
     this.ground = new Ground();
     this.godrays = new Godrays();
     this.erdtree = new Erdtree();

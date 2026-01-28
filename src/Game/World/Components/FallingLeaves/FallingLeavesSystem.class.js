@@ -6,7 +6,7 @@ import { LAYERS } from '../../../PostProcessing/LayerConfig.util';
 export default class FallingLeavesSystem {
   constructor(geometry, bounds) {
     this.game = Game.getInstance();
-    this.count = 35;
+    this.count = 50;
     this.scene = this.game.scene;
     this.bounds = bounds;
 
@@ -42,9 +42,9 @@ export default class FallingLeavesSystem {
     p.pos.z = this.bounds.originZ + (Math.random() - 0.5) * this.bounds.zRange;
 
     p.vel.set(
-      (Math.random() - 0.2) * 0.05,
+      (Math.random() - 0.5) * 0.05,
       -(Math.random() * 0.01 + 0.02),
-      (Math.random() - 0.7) * 0.05,
+      (Math.random() - 0.5) * 0.05,
     );
 
     p.rot.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
@@ -77,7 +77,8 @@ export default class FallingLeavesSystem {
         );
       }
 
-      p.pos.z -= Math.sin(p.pos.y) * 0.001 * cappedDt * 60;
+      p.pos.x += Math.sin(p.pos.y * 0.5) * 0.001 * cappedDt * 60;
+      p.pos.z += Math.cos(p.pos.y * 0.5) * 0.001 * cappedDt * 60;
 
       this.dummy.position.copy(p.pos);
       this.dummy.rotation.copy(p.rot);
@@ -87,7 +88,7 @@ export default class FallingLeavesSystem {
 
       this.mesh.setMatrixAt(i, this.dummy.matrix);
 
-      if (p.pos.y < 10.0) {
+      if (p.pos.y < 12.0) {
         this.respawn(p);
       }
     }
