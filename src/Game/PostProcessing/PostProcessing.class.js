@@ -1,6 +1,7 @@
 import Game from '../Game.class';
 import BloomPass from './Passes/BloomPass.class';
 import GlowPass from './Passes/GlowPass.class';
+import CompositePass from './Passes/CompositePass.class';
 import { LAYERS } from './LayerConfig.util';
 
 export default class PostProcessing {
@@ -13,6 +14,7 @@ export default class PostProcessing {
 
     this.glowPass = new GlowPass();
     this.bloomPass = new BloomPass();
+    this.compositePass = new CompositePass(this.bloomPass, this.glowPass);
   }
 
   setCameraLayers(layersArray) {
@@ -24,10 +26,12 @@ export default class PostProcessing {
   resize() {
     this.glowPass.resize();
     this.bloomPass.resize();
+    this.compositePass.resize();
   }
 
   destroy() {
     this.glowPass.destroy();
     this.bloomPass.destroy();
+    this.compositePass.destroy();
   }
 }

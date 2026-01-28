@@ -17,7 +17,7 @@ export default class Erdtree {
     this.params = {
       scale: 1.125,
       positionY: -0.1,
-      rotationY: 1.4,
+      rotationY: 1.6,
       baseColor: '#918869',
       fresnelColor: '#cbc5a2',
       fresnelPower: 1.0,
@@ -46,17 +46,7 @@ export default class Erdtree {
   }
 
   setup() {
-    if (!this.resources || !this.resources.items) {
-      console.error('Resources not available:', this.resources);
-      return;
-    }
-
     const gltf = this.resources.items.erdtreeModel;
-    if (!gltf) {
-      console.error('Erdtree model not loaded');
-      return;
-    }
-
     this.model = gltf.scene;
 
     this.createShaderMaterial();

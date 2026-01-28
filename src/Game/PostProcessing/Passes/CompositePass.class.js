@@ -16,17 +16,20 @@ export default class CompositePass {
     this.glowPass = glowPass;
 
     this.colorParams = {
-      color: '#c5b16d',
+      color: '#f2db8e',
     };
 
     this.params = {
       bloomEnabled: true,
       glowEnabled: true,
+      glowSamples: 24,
     };
 
+    // Reusable vector to avoid allocations
+    this.tempMeshScreenPos = new THREE.Vector3();
+    this.tempMeshUV = new THREE.Vector2();
+
     this.createOrthographicCamera();
-    this.createBloomComposite();
-    this.createGlowComposite();
     this.createCombinedComposite();
 
     if (this.isDebugEnabled) {
@@ -42,76 +45,9 @@ export default class CompositePass {
       frustumSize / 2,
       -frustumSize / 2,
       -1000,
-      1000
+      1000,
     );
     this.camera.position.set(0, 0, 1);
-  }
-
-  createBloomComposite() {
-    const shader = {
-      uniforms: {
-        bloomTexture: { value: null },
-      },
-      vertexShader: vertexShader,
-      fragmentShader: `
-        uniform sampler2D bloomTexture;
-        varying vec2 vUv;
-        void main() {
-          vec4 bloom = texture2D(bloomTexture, vUv);
-          gl_FragColor = bloom;
-        }
-      `,
-    };
-
-    this.bloomMaterial = new THREE.ShaderMaterial({
-      uniforms: shader.uniforms,
-      vertexShader: shader.vertexShader,
-      fragmentShader: shader.fragmentShader,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
-    this.bloomMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.sizes.aspect, 1),
-      this.bloomMaterial
-    );
-
-    this.bloomScene = new THREE.Scene();
-    this.bloomScene.add(this.bloomMesh);
-  }
-
-  createGlowComposite() {
-    const initialColor = new THREE.Color(this.colorParams.color);
-
-    this.glowMaterial = new THREE.ShaderMaterial({
-      vertexShader: vertexShader,
-      fragmentShader: fragmentPostShader,
-      side: THREE.DoubleSide,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      uniforms: {
-        uMap: { value: null },
-        uTime: { value: 0 },
-        uMeshCenter: { value: new THREE.Vector2(0.5, 0.5) },
-        uColorMultiplier: {
-          value: new THREE.Color(
-            initialColor.r,
-            initialColor.g,
-            initialColor.b
-          ),
-        },
-      },
-    });
-
-    this.glowMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.sizes.aspect, 1),
-      this.glowMaterial
-    );
-
-    this.glowScene = new THREE.Scene();
-    this.glowScene.add(this.glowMesh);
   }
 
   createCombinedComposite() {
@@ -123,6 +59,7 @@ export default class CompositePass {
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      depthTest: false,
       uniforms: {
         bloomTexture: { value: null },
         glowTexture: { value: null },
@@ -132,71 +69,46 @@ export default class CompositePass {
           value: new THREE.Color(
             initialColor.r,
             initialColor.g,
-            initialColor.b
+            initialColor.b,
           ),
         },
         bloomEnabled: { value: this.params.bloomEnabled },
         glowEnabled: { value: this.params.glowEnabled },
+        glowSamples: { value: this.params.glowSamples },
       },
     });
 
     this.combinedMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(this.sizes.aspect, 1),
-      this.combinedMaterial
+      this.combinedMaterial,
     );
 
     this.combinedScene = new THREE.Scene();
     this.combinedScene.add(this.combinedMesh);
   }
 
-  updateGlowUniforms(meshPosition, camera) {
-    this.glowMaterial.uniforms.uTime.value = this.time.elapsed;
-
-    const meshScreenPos = meshPosition.clone();
-    meshScreenPos.project(camera);
-
-    const meshUV = new THREE.Vector2(
-      (meshScreenPos.x + 1) / 2,
-      (meshScreenPos.y + 1) / 2
-    );
-
-    this.glowMaterial.uniforms.uMeshCenter.value.copy(meshUV);
-  }
-
-  renderBloom() {
-    if (!this.params.bloomEnabled) return;
-    this.bloomMaterial.uniforms.bloomTexture.value = this.bloomPass.renderTarget.texture;
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.bloomScene, this.camera);
-  }
-
-  renderGlow() {
-    if (!this.params.glowEnabled) return;
-    this.glowMaterial.uniforms.uMap.value = this.glowPass.renderTarget.texture;
-    this.renderer.setRenderTarget(null);
-    this.renderer.render(this.glowScene, this.camera);
-  }
-
   renderCombined() {
-    this.combinedMaterial.uniforms.bloomTexture.value = this.bloomPass.renderTarget.texture;
-    this.combinedMaterial.uniforms.glowTexture.value = this.glowPass.renderTarget.texture;
-    this.combinedMaterial.uniforms.uTime.value = this.time.elapsed;
-    this.combinedMaterial.uniforms.bloomEnabled.value = this.params.bloomEnabled;
-    this.combinedMaterial.uniforms.glowEnabled.value = this.params.glowEnabled;
-    
+    const uniforms = this.combinedMaterial.uniforms;
+
+    uniforms.bloomTexture.value = this.bloomPass.renderTarget.texture;
+    uniforms.glowTexture.value = this.glowPass.renderTarget.texture;
+    uniforms.uTime.value = this.time.elapsed;
+
     if (this.params.glowEnabled) {
       const meshPosition = this.game.world?.godrays?.sourceMesh?.position;
       if (meshPosition) {
-        const meshScreenPos = meshPosition.clone();
-        meshScreenPos.project(this.game.camera.cameraInstance);
-        const meshUV = new THREE.Vector2(
-          (meshScreenPos.x + 1) / 2,
-          (meshScreenPos.y + 1) / 2
+        // Reuse temp vectors to avoid allocations
+        this.tempMeshScreenPos.copy(meshPosition);
+        this.tempMeshScreenPos.project(this.game.camera.cameraInstance);
+
+        this.tempMeshUV.set(
+          (this.tempMeshScreenPos.x + 1) * 0.5,
+          (this.tempMeshScreenPos.y + 1) * 0.5,
         );
-        this.combinedMaterial.uniforms.uMeshCenter.value.copy(meshUV);
+        uniforms.uMeshCenter.value.copy(this.tempMeshUV);
       }
     }
-    
+
     this.renderer.setRenderTarget(null);
     this.renderer.render(this.combinedScene, this.camera);
   }
@@ -204,29 +116,58 @@ export default class CompositePass {
   initTweakPane() {
     const folder = 'Composite';
 
-    this.debug.add(this.params, 'bloomEnabled', {
-      label: 'Bloom Enabled',
-      onChange: (v) => {
-        this.combinedMaterial.uniforms.bloomEnabled.value = v;
+    this.debug.add(
+      this.params,
+      'bloomEnabled',
+      {
+        label: 'Bloom Enabled',
+        onChange: (v) => {
+          this.combinedMaterial.uniforms.bloomEnabled.value = v;
+        },
       },
-    }, folder);
+      folder,
+    );
 
-    this.debug.add(this.params, 'glowEnabled', {
-      label: 'Glow Enabled',
-      onChange: (v) => {
-        this.combinedMaterial.uniforms.glowEnabled.value = v;
+    this.debug.add(
+      this.params,
+      'glowEnabled',
+      {
+        label: 'Glow Enabled',
+        onChange: (v) => {
+          this.combinedMaterial.uniforms.glowEnabled.value = v;
+        },
       },
-    }, folder);
+      folder,
+    );
 
-    this.debug.add(this.colorParams, 'color', {
-      label: 'Glow Color',
-      color: true,
-      onChange: (v) => {
-        const color = new THREE.Color(v);
-        this.glowMaterial.uniforms.uColorMultiplier.value.copy(color);
-        this.combinedMaterial.uniforms.uColorMultiplier.value.copy(color);
+    this.debug.add(
+      this.params,
+      'glowSamples',
+      {
+        label: 'Glow Samples',
+        min: 4,
+        max: 64,
+        step: 4,
+        onChange: (v) => {
+          this.combinedMaterial.uniforms.glowSamples.value = v;
+        },
       },
-    }, folder);
+      folder,
+    );
+
+    this.debug.add(
+      this.colorParams,
+      'color',
+      {
+        label: 'Glow Color',
+        color: true,
+        onChange: (v) => {
+          const color = new THREE.Color(v);
+          this.combinedMaterial.uniforms.uColorMultiplier.value.copy(color);
+        },
+      },
+      folder,
+    );
   }
 
   resize() {
@@ -238,26 +179,16 @@ export default class CompositePass {
     this.camera.updateProjectionMatrix();
 
     const newAspect = this.sizes.aspect;
-    
-    if (!this.lastAspect || Math.abs(this.lastAspect - newAspect) > 0.01) {
-      this.bloomMesh.geometry.dispose();
-      this.bloomMesh.geometry = new THREE.PlaneGeometry(newAspect, 1);
 
-      this.glowMesh.geometry.dispose();
-      this.glowMesh.geometry = new THREE.PlaneGeometry(newAspect, 1);
-      
+    if (!this.lastAspect || Math.abs(this.lastAspect - newAspect) > 0.01) {
       this.combinedMesh.geometry.dispose();
       this.combinedMesh.geometry = new THREE.PlaneGeometry(newAspect, 1);
-      
+
       this.lastAspect = newAspect;
     }
   }
 
   destroy() {
-    this.bloomMesh.geometry.dispose();
-    this.bloomMaterial.dispose();
-    this.glowMesh.geometry.dispose();
-    this.glowMaterial.dispose();
     this.combinedMesh.geometry.dispose();
     this.combinedMaterial.dispose();
   }

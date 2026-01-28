@@ -47,7 +47,7 @@ export default class Game {
 
   static getInstance() {
     if (!Game.instance) {
-      throw new Error('Game instance not initialized. Call new Game(canvas, resources, debugMode) first.');
+      Game.instance = new Game();
     }
     return Game.instance;
   }

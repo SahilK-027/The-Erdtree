@@ -71,13 +71,6 @@ export default class Godrays {
 
   update() {
     this.sourceMesh.rotation.y = -this.time.elapsed * this.params.rotationSpeed;
-
-    if (this.game.renderPipeline?.postProcessing?.compositePass) {
-      this.game.renderPipeline.postProcessing.compositePass.updateGlowUniforms(
-        this.sourceMesh.position,
-        this.game.camera.cameraInstance
-      );
-    }
   }
 
   initTweakPane() {
@@ -163,9 +156,8 @@ export default class Godrays {
         color: true,
         onChange: (v) => {
           const color = new THREE.Color(v);
-          this.bloomMaterial.color.copy(color);
           if (this.game.renderPipeline?.postProcessing?.compositePass) {
-            this.game.renderPipeline.postProcessing.compositePass.glowMaterial.uniforms.uColorMultiplier.value.copy(
+            this.game.renderPipeline.postProcessing.compositePass.combinedMaterial.uniforms.uColorMultiplier.value.copy(
               color
             );
           }
