@@ -6,6 +6,7 @@ import Erdtree from './Components/Erdtree/Erdtree.class';
 import Ground from './Components/Ground/Ground.class';
 import FallingLeaves from './Components/FallingLeaves/FallingLeaves.class';
 import Smoke from './Components/Smoke/Smoke.class';
+import FlowfieldParticles from './Components/FlowfieldParticles/FlowfieldParticles.class';
 
 export default class World {
   constructor() {
@@ -28,6 +29,9 @@ export default class World {
       yOffset: -1.8
     });
 
+    // Initialize flowfield particles after erdtree is created
+    this.flowfieldParticles = new FlowfieldParticles(this.erdtree.model);
+
     this.lighting = new Lighting({ helperEnabled: false });
   }
 
@@ -36,5 +40,6 @@ export default class World {
     this.erdtree.update();
     this.fallingLeaves.update(this.game.time.delta);
     this.Smoke.update();
+    this.flowfieldParticles.update();
   }
 }
