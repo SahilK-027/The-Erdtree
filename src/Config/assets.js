@@ -26,6 +26,11 @@ const ASSETS = [
     type: 'gltfModelCompressed',
     path: '/assets/models/leaf.glb',
   },
+  {
+    id: 'smokeTexture',
+    type: 'texture',
+    path: '/assets/textures/smoke/smoke.png',
+  },
 ];
 
 export default ASSETS;
