@@ -10,6 +10,7 @@ export default class Camera {
     this.scene = this.game.scene;
     this.debug = this.game.debug;
     this.isDebugEnabled = this.game.isDebugEnabled;
+    this.time = this.game.time;
 
     this.params = { fov, near, far };
 
@@ -23,6 +24,17 @@ export default class Camera {
       0.1,
       1.2825497963632837,
     );
+
+    // Intro camera animation
+    this.introStartPosition = new THREE.Vector3(2.5, 1.5, 0.3); // Near top of tree, close to leaves
+    this.introStartTarget = new THREE.Vector3(2.5, 1.5, 0); // Looking at upper canopy
+    this.introAnimation = {
+      isActive: false,
+      progress: 0,
+      duration: 6,
+      startTime: 0,
+      easeOutCubic: (t) => 1 - Math.pow(1 - t, 3), // Smooth easing
+    };
 
     this.setPerspectiveCameraInstance(fov, near, far);
     this.setOrbitControls();
@@ -41,7 +53,8 @@ export default class Camera {
       far,
     );
 
-    this.cameraInstance.position.copy(this.initialCameraPosition);
+    // Start at intro position, will lerp to initial position when animation starts
+    this.cameraInstance.position.copy(this.introStartPosition);
     this.scene.add(this.cameraInstance);
   }
 
@@ -50,11 +63,14 @@ export default class Camera {
     this.controls.enableDamping = true;
     this.controls.enableRotate = false;
     this.controls.enableZoom = false;
-    this.controls.target.copy(this.targetPoint);
+    this.controls.enabled = false;
+    this.controls.target.copy(this.introStartTarget);
     this.controls.minPolarAngle = Math.PI / 8;
     this.controls.maxPolarAngle = Math.PI / 2.05;
 
-    this.updateCameraForAspectRatio();
+    // Calculate ratio overflow for later use
+    const currentRatio = this.sizes.width / this.sizes.height;
+    this.ratioOverflow = Math.max(1, this.idealRatio / currentRatio) - 1;
   }
 
   updateCameraForAspectRatio() {
@@ -71,7 +87,7 @@ export default class Camera {
 
     // Update target point based on ratio overflow (only if controls exist)
     if (this.controls) {
-      const targetAdjustment = this.ratioOverflow * 0.27;
+      const targetAdjustment = this.ratioOverflow * 0.35;
       const adjustedTarget = this.targetPoint.clone();
       adjustedTarget.z -= targetAdjustment;
       this.controls.target.copy(adjustedTarget);
@@ -86,7 +102,58 @@ export default class Camera {
     this.updateCameraForAspectRatio();
   }
 
+  startIntroAnimation() {
+    this.introAnimation.isActive = true;
+    this.introAnimation.progress = 0;
+    this.introAnimation.startTime = this.time.elapsed;
+
+    // Set camera to start position
+    this.cameraInstance.position.copy(this.introStartPosition);
+    this.controls.target.copy(this.introStartTarget);
+    this.controls.enabled = false;
+  }
+
   update() {
+    // Handle intro animation
+    if (this.introAnimation.isActive) {
+      const elapsed = this.time.elapsed - this.introAnimation.startTime;
+      const rawProgress = Math.min(elapsed / this.introAnimation.duration, 1);
+      this.introAnimation.progress =
+        this.introAnimation.easeOutCubic(rawProgress);
+
+      // Calculate adjusted end position based on aspect ratio
+      const baseDistance = this.initialCameraPosition.length();
+      const additionalDistance = baseDistance * this.ratioOverflow * 0.27;
+      const direction = this.initialCameraPosition.clone().normalize();
+      const newDistance = baseDistance + additionalDistance;
+      const adjustedEndPosition = direction.multiplyScalar(newDistance);
+
+      // Calculate adjusted end target
+      const targetAdjustment = this.ratioOverflow * 0.27;
+      const adjustedEndTarget = this.targetPoint.clone();
+      adjustedEndTarget.z -= targetAdjustment;
+
+      // Lerp camera position
+      this.cameraInstance.position.lerpVectors(
+        this.introStartPosition,
+        adjustedEndPosition,
+        this.introAnimation.progress,
+      );
+
+      // Lerp camera target
+      this.controls.target.lerpVectors(
+        this.introStartTarget,
+        adjustedEndTarget,
+        this.introAnimation.progress,
+      );
+
+      // End animation
+      if (rawProgress >= 1) {
+        this.introAnimation.isActive = false;
+        this.controls.enabled = true;
+      }
+    }
+
     this.controls.update();
   }
 

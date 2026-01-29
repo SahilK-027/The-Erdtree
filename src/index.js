@@ -95,6 +95,11 @@ function startExploration(withAudio) {
   hud.classList.add('visible');
   audioControls.classList.add('visible');
   
+  // Start camera intro animation
+  if (gameInstance && gameInstance.camera) {
+    gameInstance.camera.startIntroAnimation();
+  }
+  
   if (withAudio) {
     // Start playing music (this will also trigger intro after 3s)
     audioManager.play();
