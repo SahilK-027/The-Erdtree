@@ -57,6 +57,11 @@ export default class Smoke {
       opacity: opacity,
       color: new THREE.Color(color),
     });
+    
+    // Test material
+    // this.smokeMaterial = new THREE.MeshBasicMaterial({
+    //   color: new THREE.Color('red'),
+    // });
 
     // Create instanced mesh
     this.mesh = new THREE.InstancedMesh(
@@ -69,36 +74,59 @@ export default class Smoke {
     // Store positions and animation data for update loop
     this.particles = [];
 
-    // Position instances on hemisphere with completely random XZ
+    // Position instances in front of camera view
     const dummy = new THREE.Object3D();
     let index = 0;
 
+    // Camera is at approximately (1.43, 0.1, 1.28) looking at (2.8, 0.85, 0)
+    // We want smoke concentrated in the forward view frustum
+    const cameraPos = new THREE.Vector3(1.43, 0.1, 1.28);
+    const targetPos = new THREE.Vector3(2.8, 0.85, 0);
+    const viewDirection = new THREE.Vector3()
+      .subVectors(targetPos, cameraPos)
+      .normalize();
+
     for (let ring = 0; ring < rings; ring++) {
-      // Angle from top (0) to only upper portion (PI/4 instead of PI/2)
-      // This keeps smoke concentrated at the top
-      const phi = (Math.PI / 4) * (ring / rings);
-      const y = radius * Math.cos(phi);
+      // Distribute along depth from camera
+      const depth = 2 + (ring / rings) * randomRange;
 
       for (let seg = 0; seg < segments; seg++) {
-        // Completely random XZ position
-        const x = (MATH.random() - 0.5) * randomRange * 2;
-        const z = (MATH.random() - 0.5) * randomRange * 2;
-        const yPos = y + yOffset;
+        // Create positions in a cone/frustum shape in front of camera
+        // Use spherical distribution but biased forward
+        const horizontalAngle = (seg / segments) * Math.PI * 2;
+        const spreadRadius = (1 + ring / rings) * randomRange * 0.4;
+
+        // Offset from view direction
+        const offsetX =
+          Math.cos(horizontalAngle) *
+          spreadRadius *
+          (0.3 + MATH.random() * 0.7);
+        const offsetY =
+          Math.sin(horizontalAngle) *
+          spreadRadius *
+          (0.3 + MATH.random() * 0.7);
+
+        // Position along view direction with offsets
+        const x = cameraPos.x + viewDirection.x * depth + offsetX;
+        const z = cameraPos.z + viewDirection.z * depth + offsetX * 0.5;
+        const y = cameraPos.y + depth * 0.3 + offsetY + yOffset;
 
         // Store position and animation data
         this.particles.push({
           baseX: x,
-          baseY: yPos,
+          baseY: y,
           baseZ: z,
           floatingSpeed: MATH.random() * this.config.floatingSpeed,
-          rotationSpeed: (MATH.random() - 0.5) * MATH.random() * this.config.rotationSpeed,
-          floatingAmplitude: 0.5 + MATH.random() * this.config.floatingAmplitude,
+          rotationSpeed:
+            (MATH.random() - 0.5) * MATH.random() * this.config.rotationSpeed,
+          floatingAmplitude:
+            0.5 + MATH.random() * this.config.floatingAmplitude,
         });
 
-        dummy.position.set(x, yPos, z);
+        dummy.position.set(x, y, z);
 
-        // Make plane face the center (camera will be at center)
-        dummy.lookAt(0, 0, 0);
+        // Make plane face the camera position
+        dummy.lookAt(cameraPos);
 
         dummy.updateMatrix();
         this.mesh.setMatrixAt(index, dummy.matrix);
@@ -115,24 +143,27 @@ export default class Smoke {
     // Update planes to face camera with animation
     const dummy = new THREE.Object3D();
     const cameraPosition = this.camera.position;
-    const elapsedTime = this.time.elapsed * 100.0;
+    const elapsedTime = this.time.elapsed * 150.0;
+    const minHeight = 1.5;
 
     for (let i = 0; i < this.particles.length; i++) {
       const particle = this.particles[i];
 
       // Animate position with floating motion
       const x = particle.baseX;
-      const y =
+      const y = Math.max(
+        minHeight,
         particle.baseY +
-        Math.sin(elapsedTime * particle.floatingSpeed) *
-          particle.floatingAmplitude;
+          Math.sin(elapsedTime * particle.floatingSpeed) *
+            particle.floatingAmplitude,
+      );
       const z = particle.baseZ;
 
       dummy.position.set(x, y, z);
       dummy.lookAt(cameraPosition);
 
-      // Add rotation animation
-      dummy.rotation.z = elapsedTime * particle.rotationSpeed;
+      // Add rotation animation (negative for anticlockwise)
+      dummy.rotation.z = -elapsedTime * particle.rotationSpeed;
 
       dummy.updateMatrix();
       this.mesh.setMatrixAt(i, dummy.matrix);
@@ -147,71 +178,118 @@ export default class Smoke {
     this.debug.add(
       this.config,
       'opacity',
-      { min: 0, max: 1, step: 0.01, label: 'Opacity', onChange: (v) => {
-        this.smokeMaterial.opacity = v;
-      }},
-      'Smoke'
+      {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        label: 'Opacity',
+        onChange: (v) => {
+          this.smokeMaterial.opacity = v;
+        },
+      },
+      'Smoke',
     );
 
     this.debug.add(
       this.config,
       'planeSize',
-      { min: 0.1, max: 2, step: 0.1, label: 'Plane Size', onChange: () => {
-        this.recreateDome();
-      }},
-      'Smoke'
+      {
+        min: 0.1,
+        max: 2,
+        step: 0.1,
+        label: 'Plane Size',
+        onChange: () => {
+          this.recreateDome();
+        },
+      },
+      'Smoke',
     );
 
     this.debug.add(
       this.smokeMaterial,
       'color',
       { color: true, label: 'Color' },
-      'Smoke'
+      'Smoke',
     );
 
     this.debug.add(
       this.config,
       'yOffset',
-      { min: -10, max: 20, step: 0.5, label: 'Y Offset', onChange: () => {
-        this.recreateDome();
-      }},
-      'Smoke'
+      {
+        min: -10,
+        max: 20,
+        step: 0.5,
+        label: 'Y Offset',
+        onChange: () => {
+          this.recreateDome();
+        },
+      },
+      'Smoke',
     );
 
     this.debug.add(
       this.config,
       'randomRange',
-      { min: 5, max: 50, step: 1, label: 'Random Range', onChange: () => {
-        this.recreateDome();
-      }},
-      'Smoke'
+      {
+        min: 5,
+        max: 50,
+        step: 1,
+        label: 'Random Range',
+        onChange: () => {
+          this.recreateDome();
+        },
+      },
+      'Smoke',
     );
 
     this.debug.add(
       this.config,
       'floatingSpeed',
-      { min: 0, max: 0.005, step: 0.0001, label: 'Floating Speed', onChange: (v) => {
-        this.particles.forEach(p => p.floatingSpeed = MATH.random() * v);
-      }},
-      'Smoke'
+      {
+        min: 0,
+        max: 0.005,
+        step: 0.0001,
+        label: 'Floating Speed',
+        onChange: (v) => {
+          this.particles.forEach((p) => (p.floatingSpeed = MATH.random() * v));
+        },
+      },
+      'Smoke',
     );
 
     this.debug.add(
       this.config,
       'rotationSpeed',
-      { min: 0, max: 0.01, step: 0.0001, label: 'Rotation Speed', onChange: (v) => {
-        this.particles.forEach(p => p.rotationSpeed = (MATH.random() - 0.5) * MATH.random() * v);
-      }},
-      'Smoke'
+      {
+        min: 0,
+        max: 0.01,
+        step: 0.0001,
+        label: 'Rotation Speed',
+        onChange: (v) => {
+          this.particles.forEach(
+            (p) =>
+              (p.rotationSpeed = (MATH.random() - 0.5) * MATH.random() * v),
+          );
+        },
+      },
+      'Smoke',
     );
 
     this.debug.add(
       this.config,
       'floatingAmplitude',
-      { min: 0, max: 5, step: 0.1, label: 'Floating Amplitude', onChange: (v) => {
-        this.particles.forEach(p => p.floatingAmplitude = 0.5 + MATH.random() * v);
-      }},
-      'Smoke'
+      {
+        min: 0,
+        max: 5,
+        step: 0.1,
+        label: 'Floating Amplitude',
+        onChange: (v) => {
+          this.particles.forEach(
+            (p) => (p.floatingAmplitude = 0.5 + MATH.random() * v),
+          );
+        },
+      },
+      'Smoke',
     );
   }
 

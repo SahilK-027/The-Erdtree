@@ -7,6 +7,7 @@ import Ground from './Components/Ground/Ground.class';
 import FallingLeaves from './Components/FallingLeaves/FallingLeaves.class';
 import Smoke from './Components/Smoke/Smoke.class';
 import FlowfieldParticles from './Components/FlowfieldParticles/FlowfieldParticles.class';
+import Ruins from './Components/Ruins/Ruins.class';
 
 export default class World {
   constructor() {
@@ -17,15 +18,16 @@ export default class World {
     this.ground = new Ground();
     this.godrays = new Godrays();
     this.erdtree = new Erdtree();
+    this.ruins = new Ruins();
     this.fallingLeaves = new FallingLeaves();
     this.Smoke = new Smoke({
       radius: 5,
       segments: 9,
-      rings: 3,
-      planeSize: 5,
+      rings: 2,
+      planeSize: 2,
       randomOffset: 10.0,
       color: 0xffed9f,
-      opacity: 1.0,
+      opacity: 0.5,
       yOffset: -1.8
     });
 

@@ -11,7 +11,7 @@ export class FlowfieldParticleSystem {
     this.scene = scene;
     this.renderer = renderer;
 
-    this.WIDTH = 50;
+    this.WIDTH = 40;
     this.PARTICLES = this.WIDTH * this.WIDTH;
 
     // Collect mesh data for surface sampling

@@ -13,7 +13,6 @@ export default class Ground {
     this.params = {
       size: options.size || 200,
       textureRepeat: options.textureRepeat || 120,
-      displacementScale: options.displacementScale || 0.0,
       roughness: options.roughness || 1.0,
       metalness: options.metalness || 0.2,
       positionY: options.positionY || 0,
@@ -36,18 +35,18 @@ export default class Ground {
     const normalMap = this.resources.items.groundNormalMap;
     const aoMap = this.resources.items.groundAOMap;
     const roughnessMap = this.resources.items.groundRoughnessMap;
-    const displacementMap = this.resources.items.groundDisplacementMap;
 
     // Configure texture wrapping and repeat
-    [diffuseMap, normalMap, aoMap, roughnessMap, displacementMap].forEach(
-      (texture) => {
-        if (texture) {
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(this.params.textureRepeat, this.params.textureRepeat);
-        }
-      },
-    );
+    [diffuseMap, normalMap, aoMap, roughnessMap].forEach((texture) => {
+      if (texture) {
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(
+          this.params.textureRepeat,
+          this.params.textureRepeat,
+        );
+      }
+    });
 
     // Set color space for diffuse map
     if (diffuseMap) {
@@ -129,27 +128,11 @@ export default class Ground {
             this.material.normalMap,
             this.material.aoMap,
             this.material.roughnessMap,
-            this.material.displacementMap,
           ].forEach((texture) => {
             if (texture) {
               texture.repeat.set(v, v);
             }
           });
-        },
-      },
-      folder,
-    );
-
-    this.debug.add(
-      this.params,
-      'displacementScale',
-      {
-        label: 'Displacement Scale',
-        min: 0,
-        max: 1,
-        step: 0.01,
-        onChange: (v) => {
-          this.material.displacementScale = v;
         },
       },
       folder,

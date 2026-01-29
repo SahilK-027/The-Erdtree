@@ -19,7 +19,7 @@ export default class BloomPass {
       radius: 1.0,
       threshold: 0.0,
       smoothing: 0.1,
-      iterations: 2, // Number of blur passes (2 = 4 total passes)
+      iterations: 2,
     };
 
     this.createRenderTargets();

@@ -19,6 +19,9 @@ export default class Godrays {
 
     this.params = {
       rotationSpeed: 0.0,
+      rotationX: 0,
+      rotationY: 0.2,
+      rotationZ: 0,
       tile: 7,
       cutoff: 0.35,
       feather: 0.02,
@@ -53,7 +56,12 @@ export default class Godrays {
     });
 
     this.sourceMesh = new THREE.Mesh(this.sourceGeometry, this.sourceMaterial);
-    this.sourceMesh.position.y = 1.1;
+    this.sourceMesh.position.y = 1.21;
+    this.sourceMesh.rotation.set(
+      this.params.rotationX,
+      this.params.rotationY,
+      this.params.rotationZ,
+    );
     this.sourceMesh.layers.set(LAYERS.GLOW);
     this.scene.add(this.sourceMesh);
 
@@ -69,9 +77,7 @@ export default class Godrays {
     // this.scene.add(this.bloomMesh);
   }
 
-  update() {
-    this.sourceMesh.rotation.y = -this.time.elapsed * this.params.rotationSpeed;
-  }
+  update() {}
 
   initTweakPane() {
     const folder = 'Godrays';
@@ -85,7 +91,52 @@ export default class Godrays {
         max: 2,
         step: 0.01,
       },
-      folder
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'rotationX',
+      {
+        label: 'Rotation X',
+        min: 0,
+        max: Math.PI * 2,
+        step: 0.01,
+        onChange: (v) => {
+          this.sourceMesh.rotation.x = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'rotationY',
+      {
+        label: 'Rotation Y',
+        min: 0,
+        max: Math.PI * 2,
+        step: 0.01,
+        onChange: (v) => {
+          this.sourceMesh.rotation.y = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'rotationZ',
+      {
+        label: 'Rotation Z',
+        min: 0,
+        max: Math.PI * 2,
+        step: 0.01,
+        onChange: (v) => {
+          this.sourceMesh.rotation.z = v;
+        },
+      },
+      folder,
     );
 
     this.debug.add(
@@ -100,7 +151,7 @@ export default class Godrays {
           this.sourceMaterial.uniforms.uTile.value = v;
         },
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -115,7 +166,7 @@ export default class Godrays {
           this.sourceMaterial.uniforms.uCutoff.value = v;
         },
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -130,7 +181,7 @@ export default class Godrays {
           this.sourceMaterial.uniforms.uFeather.value = v;
         },
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -145,7 +196,7 @@ export default class Godrays {
           this.bloomMesh.position.y = v;
         },
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -158,12 +209,12 @@ export default class Godrays {
           const color = new THREE.Color(v);
           if (this.game.renderPipeline?.postProcessing?.compositePass) {
             this.game.renderPipeline.postProcessing.compositePass.combinedMaterial.uniforms.uColorMultiplier.value.copy(
-              color
+              color,
             );
           }
         },
       },
-      folder
+      folder,
     );
   }
 

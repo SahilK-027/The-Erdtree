@@ -16,8 +16,10 @@ export default class Erdtree {
 
     this.params = {
       scale: 1.125,
-      positionY: -0.1,
-      rotationY: 1.6,
+      positionX: 0,
+      positionY: 0.0,
+      positionZ: 0,
+      rotationY: 1.36,
       baseColor: '#918869',
       fresnelColor: '#cbc5a2',
       fresnelPower: 1.0,
@@ -59,7 +61,11 @@ export default class Erdtree {
     });
 
     this.model.scale.setScalar(this.params.scale);
-    this.model.position.y = this.params.positionY;
+    this.model.position.set(
+      this.params.positionX,
+      this.params.positionY,
+      this.params.positionZ
+    );
     this.model.rotation.set(
       0,
       this.params.rotationY,
@@ -382,6 +388,21 @@ export default class Erdtree {
 
     this.debug.add(
       this.params,
+      'positionX',
+      {
+        label: 'Position X',
+        min: -10,
+        max: 10,
+        step: 0.1,
+        onChange: (v) => {
+          this.model.position.x = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
       'positionY',
       {
         label: 'Position Y',
@@ -390,6 +411,21 @@ export default class Erdtree {
         step: 0.1,
         onChange: (v) => {
           this.model.position.y = v;
+        },
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this.params,
+      'positionZ',
+      {
+        label: 'Position Z',
+        min: -10,
+        max: 10,
+        step: 0.1,
+        onChange: (v) => {
+          this.model.position.z = v;
         },
       },
       folder,

@@ -27,6 +27,11 @@ const ASSETS = [
     path: '/assets/models/leaf.glb',
   },
   {
+    id: 'ruinsModel',
+    type: 'gltfModelCompressed',
+    path: '/assets/models/ruins.compressed.glb',
+  },
+  {
     id: 'smokeTexture',
     type: 'texture',
     path: '/assets/textures/smoke/smoke.png',

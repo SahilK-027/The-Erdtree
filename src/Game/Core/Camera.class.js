@@ -14,14 +14,29 @@ export default class Camera {
     this.params = { fov, near, far };
 
     // Erdtree focal point - look at the trunk/lower canopy
-    this.targetPoint = new THREE.Vector3(0, 0.85, 0);
+    this.targetPoint = new THREE.Vector3(2.8, 0.85, 0);
 
+    // Cursor for parallax
+    this.cursor = { x: 0, y: 0 };
+    
+    // Parallax settings
+    this.parallaxStrength = 0.025;
+    this.parallaxEasing = 3.0;
+
+    this.setCameraGroup();
     this.setPerspectiveCameraInstance(fov, near, far);
     this.setOrbitControls();
+    this.setupCursorTracking();
 
     if (this.isDebugEnabled) {
       this.initTweakPane();
     }
+  }
+
+  setCameraGroup() {
+    // Create camera group for parallax effect
+    this.cameraGroup = new THREE.Group();
+    this.scene.add(this.cameraGroup);
   }
 
   setPerspectiveCameraInstance(fov, near, far) {
@@ -30,37 +45,34 @@ export default class Camera {
       fov,
       aspectRatio,
       near,
-      far
+      far,
     );
 
     // Cinematic low-angle hero shot - close and looking up
-    this.cameraInstance.position.set(1.5, 0.9, 1.9);
-    this.scene.add(this.cameraInstance);
+    this.cameraInstance.position.set(
+      1.4274844135230773,
+      0.1,
+      1.2825497963632837,
+    );
+    this.cameraGroup.add(this.cameraInstance);
+  }
+
+  setupCursorTracking() {
+    window.addEventListener('mousemove', (event) => {
+      // Normalize cursor position from -0.5 to 0.5
+      this.cursor.x = event.clientX / this.sizes.width - 0.5;
+      this.cursor.y = event.clientY / this.sizes.height - 0.5;
+    });
   }
 
   setOrbitControls() {
     this.controls = new OrbitControls(this.cameraInstance, this.canvas);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
-
-    // Focus on the erdtree
+    this.controls.enableRotate = false;
+    this.controls.enableZoom = false;
     this.controls.target.copy(this.targetPoint);
-
-    // Cinematic constraints - allow looking up at the tree
-    this.controls.minPolarAngle = Math.PI / 8; // Can look up high
-    this.controls.maxPolarAngle = Math.PI / 2.05; // Prevent going below ground
-
-    // Distance constraints - keep it intimate
-    // this.controls.minDistance = 1;
-    // this.controls.maxDistance = 5;
-
-    // Smooth rotation
-    this.controls.rotateSpeed = 0.5;
-    this.controls.zoomSpeed = 0.8;
-
-    // Optional: auto-rotate for cinematic feel
-    this.controls.autoRotate = false;
-    this.controls.autoRotateSpeed = 0.3;
+    this.controls.minPolarAngle = Math.PI / 8;
+    this.controls.maxPolarAngle = Math.PI / 2.05;
   }
 
   resize() {
@@ -71,10 +83,43 @@ export default class Camera {
 
   update() {
     this.controls.update();
+
+    // Apply parallax effect with delta time for consistent animation across frame rates
+    const parallaxX = this.cursor.x * this.parallaxStrength;
+    const parallaxY = -this.cursor.y * this.parallaxStrength; // Inverted for natural feel
+
+    // Smooth parallax with delta-time-based easing
+    // delta is already in seconds from Time.class.js
+    this.cameraGroup.position.x += (parallaxX - this.cameraGroup.position.x) * this.parallaxEasing * this.game.time.delta;
+    this.cameraGroup.position.y += (parallaxY - this.cameraGroup.position.y) * this.parallaxEasing * this.game.time.delta;
   }
 
   initTweakPane() {
     const folder = 'Camera';
+
+    this.debug.add(
+      this,
+      'parallaxStrength',
+      {
+        label: 'Parallax Strength',
+        min: 0,
+        max: 2,
+        step: 0.01,
+      },
+      folder,
+    );
+
+    this.debug.add(
+      this,
+      'parallaxEasing',
+      {
+        label: 'Parallax Easing',
+        min: 0.1,
+        max: 10,
+        step: 0.1,
+      },
+      folder,
+    );
 
     this.debug.add(
       this.params,
@@ -89,7 +134,7 @@ export default class Camera {
           this.cameraInstance.updateProjectionMatrix();
         },
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -101,7 +146,7 @@ export default class Camera {
         max: 20,
         step: 0.1,
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -113,7 +158,7 @@ export default class Camera {
         max: 15,
         step: 0.1,
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -125,19 +170,43 @@ export default class Camera {
         max: 20,
         step: 0.1,
       },
-      folder
+      folder,
+    );
+
+    this.debug.add(
+      this.controls.target,
+      'x',
+      {
+        label: 'Target X',
+        min: -10,
+        max: 10,
+        step: 0.1,
+      },
+      folder,
     );
 
     this.debug.add(
       this.controls.target,
       'y',
       {
-        label: 'Look At Y',
-        min: 0,
-        max: 5,
+        label: 'Target Y',
+        min: -5,
+        max: 10,
         step: 0.1,
       },
-      folder
+      folder,
+    );
+
+    this.debug.add(
+      this.controls.target,
+      'z',
+      {
+        label: 'Target Z',
+        min: -10,
+        max: 10,
+        step: 0.1,
+      },
+      folder,
     );
 
     this.debug.add(
@@ -146,7 +215,7 @@ export default class Camera {
       {
         label: 'Auto Rotate',
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -158,7 +227,7 @@ export default class Camera {
         max: 2,
         step: 0.1,
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -167,7 +236,7 @@ export default class Camera {
       {
         label: 'Damping',
       },
-      folder
+      folder,
     );
 
     this.debug.add(
@@ -179,7 +248,7 @@ export default class Camera {
         max: 0.3,
         step: 0.01,
       },
-      folder
+      folder,
     );
   }
 }

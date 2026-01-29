@@ -19,7 +19,7 @@ export default class FlowfieldParticles {
       flowfieldStrength: 0.35,
       flowfieldFrequency: 0.8,
       flowfieldSize: 6.5,
-      sparkleSize: 2.5,
+      sparkleSize: 2.0,
       sparkleCount: 200,
       flowfieldColor1: '#ffd700',
       flowfieldColor2: '#ffed9f',
