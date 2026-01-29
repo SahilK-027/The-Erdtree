@@ -16,27 +16,20 @@ export default class Camera {
     // Erdtree focal point - look at the trunk/lower canopy
     this.targetPoint = new THREE.Vector3(2.8, 0.85, 0);
 
-    // Cursor for parallax
-    this.cursor = { x: 0, y: 0 };
-    
-    // Parallax settings
-    this.parallaxStrength = 0.025;
-    this.parallaxEasing = 3.0;
+    this.idealRatio = 16 / 9;
+    this.ratioOverflow = 0;
+    this.initialCameraPosition = new THREE.Vector3(
+      1.4274844135230773,
+      0.1,
+      1.2825497963632837,
+    );
 
-    this.setCameraGroup();
     this.setPerspectiveCameraInstance(fov, near, far);
     this.setOrbitControls();
-    this.setupCursorTracking();
 
     if (this.isDebugEnabled) {
       this.initTweakPane();
     }
-  }
-
-  setCameraGroup() {
-    // Create camera group for parallax effect
-    this.cameraGroup = new THREE.Group();
-    this.scene.add(this.cameraGroup);
   }
 
   setPerspectiveCameraInstance(fov, near, far) {
@@ -48,21 +41,8 @@ export default class Camera {
       far,
     );
 
-    // Cinematic low-angle hero shot - close and looking up
-    this.cameraInstance.position.set(
-      1.4274844135230773,
-      0.1,
-      1.2825497963632837,
-    );
-    this.cameraGroup.add(this.cameraInstance);
-  }
-
-  setupCursorTracking() {
-    window.addEventListener('mousemove', (event) => {
-      // Normalize cursor position from -0.5 to 0.5
-      this.cursor.x = event.clientX / this.sizes.width - 0.5;
-      this.cursor.y = event.clientY / this.sizes.height - 0.5;
-    });
+    this.cameraInstance.position.copy(this.initialCameraPosition);
+    this.scene.add(this.cameraInstance);
   }
 
   setOrbitControls() {
@@ -73,53 +53,45 @@ export default class Camera {
     this.controls.target.copy(this.targetPoint);
     this.controls.minPolarAngle = Math.PI / 8;
     this.controls.maxPolarAngle = Math.PI / 2.05;
+
+    this.updateCameraForAspectRatio();
+  }
+
+  updateCameraForAspectRatio() {
+    const currentRatio = this.sizes.width / this.sizes.height;
+    this.ratioOverflow = Math.max(1, this.idealRatio / currentRatio) - 1;
+
+    const baseDistance = this.initialCameraPosition.length();
+    const additionalDistance = baseDistance * this.ratioOverflow * 0.27;
+    const direction = this.initialCameraPosition.clone().normalize();
+    const newDistance = baseDistance + additionalDistance;
+    const adjustedPosition = direction.multiplyScalar(newDistance);
+
+    this.cameraInstance.position.copy(adjustedPosition);
+
+    // Update target point based on ratio overflow (only if controls exist)
+    if (this.controls) {
+      const targetAdjustment = this.ratioOverflow * 0.27;
+      const adjustedTarget = this.targetPoint.clone();
+      adjustedTarget.z -= targetAdjustment;
+      this.controls.target.copy(adjustedTarget);
+    }
   }
 
   resize() {
     const aspectRatio = this.sizes.width / this.sizes.height;
     this.cameraInstance.aspect = aspectRatio;
     this.cameraInstance.updateProjectionMatrix();
+
+    this.updateCameraForAspectRatio();
   }
 
   update() {
     this.controls.update();
-
-    // Apply parallax effect with delta time for consistent animation across frame rates
-    const parallaxX = this.cursor.x * this.parallaxStrength;
-    const parallaxY = -this.cursor.y * this.parallaxStrength; // Inverted for natural feel
-
-    // Smooth parallax with delta-time-based easing
-    // delta is already in seconds from Time.class.js
-    this.cameraGroup.position.x += (parallaxX - this.cameraGroup.position.x) * this.parallaxEasing * this.game.time.delta;
-    this.cameraGroup.position.y += (parallaxY - this.cameraGroup.position.y) * this.parallaxEasing * this.game.time.delta;
   }
 
   initTweakPane() {
     const folder = 'Camera';
-
-    this.debug.add(
-      this,
-      'parallaxStrength',
-      {
-        label: 'Parallax Strength',
-        min: 0,
-        max: 2,
-        step: 0.01,
-      },
-      folder,
-    );
-
-    this.debug.add(
-      this,
-      'parallaxEasing',
-      {
-        label: 'Parallax Easing',
-        min: 0.1,
-        max: 10,
-        step: 0.1,
-      },
-      folder,
-    );
 
     this.debug.add(
       this.params,

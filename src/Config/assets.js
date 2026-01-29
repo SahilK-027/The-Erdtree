@@ -51,6 +51,16 @@ const ASSETS = [
     type: 'texture',
     path: '/assets/textures/ground/brown_mud_leaves_01_ao_1k.jpg',
   },
+  {
+    id: 'bgMusic',
+    type: 'audio',
+    path: '/assets/music/jungle-forest-wildlife-background-music-326441.mp3',
+  },
+  {
+    id: 'introNarration',
+    type: 'audio',
+    path: '/assets/music/ElevenLabs_2026-01-29T12_08_10_Nigel Graves - Mysterious, Deep Narrator_pvc_sp94_s50_sb75_se0_b_m2.mp3',
+  },
 ];
 
 export default ASSETS;

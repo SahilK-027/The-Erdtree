@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,16 +7,19 @@
     <title>The Erdtree</title>
 
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
       * {
         margin: 0;
         padding: 0;
-        font-family: Arial, Helvetica, sans-serif;
+        box-sizing: border-box;
       }
 
       html,
       body {
         background-color: #000;
         overflow: hidden;
+        font-family: 'Inter', sans-serif;
       }
 
       canvas#three {
@@ -26,25 +29,633 @@
         outline: none;
       }
 
+      /* Loader Screen */
+      #loader-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          ellipse at 15% 100%,
+          rgba(40, 20, 10, 1) 0%,
+          rgba(20, 15, 10, 1) 30%,
+          rgba(10, 8, 6, 1) 60%,
+          rgba(0, 0, 0, 1) 100%
+        );
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 1;
+        transition: opacity 1s ease-out;
+      }
+
+      #loader-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      #loader-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+        display: none;
+      }
+
+      .loader-title {
+        position: relative;
+        width: min(90vw, 600px);
+        margin-bottom: 1rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+      }
+
+      .loader-title img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .loader-subtitle {
+        font-family: 'Cinzel', serif;
+        font-size: clamp(1rem, 3vw, 1.8rem);
+        font-weight: 400;
+        color: #8a8a8a;
+        text-transform: uppercase;
+        letter-spacing: clamp(0.2rem, 0.5vw, 0.4rem);
+        margin-bottom: clamp(2rem, 5vh, 4rem);
+        text-shadow:
+          1px 1px 0px rgba(0, 0, 0, 0.8),
+          -1px -1px 0px rgba(255, 255, 255, 0.05);
+        background: linear-gradient(
+          180deg,
+          #b8b8b8 0%,
+          #8a8a8a 50%,
+          #5a5a5a 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+      }
+
+      .loader-container {
+        position: fixed;
+        bottom: clamp(2rem, 5vh, 4rem);
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(90vw, 500px);
+        text-align: center;
+      }
+
       #progress {
         width: 100%;
-        height: 2px;
-        background: #222;
-        position: fixed;
-        top: 50%;
-        left: 0;
-        transition: all 0.3s ease;
+        height: 1px;
+        background: rgba(212, 175, 55, 0.15);
+        position: relative;
+        overflow: hidden;
+        border-radius: 0;
+        box-shadow:
+          0 0 8px rgba(212, 175, 55, 0.1),
+          inset 0 0 4px rgba(0, 0, 0, 0.5);
       }
 
       #bar {
         width: 0;
         height: 100%;
-        background: white;
+        background: linear-gradient(
+          90deg,
+          rgba(212, 175, 55, 0.3) 0%,
+          #d6c298 50%,
+          rgba(212, 175, 55, 0.3) 100%
+        );
+        box-shadow:
+          0 0 12px rgba(212, 175, 55, 0.6),
+          0 0 20px rgba(212, 175, 55, 0.3);
+        transition: width 0.3s ease;
+        position: relative;
+      }
+
+      #bar::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 3px;
+        background: #f4e4c1;
+        border-radius: 50%;
+        box-shadow:
+          0 0 8px rgba(244, 228, 193, 0.8),
+          0 0 16px rgba(212, 175, 55, 0.6);
+      }
+
+      .loader-text {
+        font-family: 'Cinzel', serif;
+        font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+        color: #d6c298;
+        margin-top: 1.5rem;
+        letter-spacing: clamp(0.15rem, 0.4vw, 0.25rem);
+        text-transform: uppercase;
+        font-weight: 400;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Explore Buttons */
+      #explore-buttons {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        margin-top: clamp(8rem, 18vh, 14rem);
+        gap: clamp(0.5rem, 1.5vh, 1rem);
+        z-index: 1001;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #explore-buttons.visible {
+        display: flex;
+        animation: fadeInUp 0.8s ease-out forwards;
+      }
+
+      .explore-btn {
+        padding: clamp(0.4rem, 1vh, 0.6rem) clamp(1rem, 2vw, 1.5rem);
+        font-family: 'Cinzel', serif;
+        font-size: clamp(0.75rem, 2vw, 0.95rem);
+        font-weight: 400;
+        color: #d6c298;
+        background: transparent;
+        border: none;
+        text-transform: uppercase;
+        letter-spacing: clamp(0.08rem, 0.2vw, 0.12rem);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(0.4rem, 1vw, 0.6rem);
+        position: relative;
+        text-shadow:
+          1px 1px 2px rgba(0, 0, 0, 0.9),
+          0 0 8px rgba(0, 0, 0, 0.5);
+        min-width: min(85vw, 420px);
+      }
+
+      .explore-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 0%;
+        height: 100%;
+        background: radial-gradient(
+          ellipse 70% 100% at center,
+          rgba(255, 193, 100, 0.5) 0%,
+          rgba(220, 180, 60, 0.35) 25%,
+          rgba(180, 136, 40, 0.15) 50%,
+          rgba(140, 100, 30, 0.05) 75%,
+          transparent 100%
+        );
+        transition: width 0.3s ease;
+        z-index: -1;
+        filter: blur(12px);
+      }
+
+      .explore-btn:hover::before {
+        width: 85%;
+      }
+
+      .explore-btn:hover {
+        color: #f4e4c1;
+        text-shadow:
+          1px 1px 3px rgba(0, 0, 0, 1),
+          0 0 15px rgba(212, 175, 55, 0.5),
+          0 0 25px rgba(212, 175, 55, 0.3);
+      }
+
+      .explore-btn:active {
+        color: #fff;
+      }
+
+      .explore-btn-primary {
+        font-size: clamp(0.8rem, 2vw, 1rem);
+        color: #d6c298;
+        font-weight: 500;
+      }
+
+      .explore-btn-secondary {
+        color: #a4a5a4;
+        font-size: clamp(0.75rem, 1.9vw, 0.9rem);
+        font-weight: 400;
+      }
+
+      .explore-btn-secondary::before {
+        background: radial-gradient(
+          ellipse 70% 100% at center,
+          rgba(255, 193, 100, 0.4) 0%,
+          rgba(220, 180, 60, 0.28) 25%,
+          rgba(180, 136, 40, 0.12) 50%,
+          rgba(140, 100, 30, 0.04) 75%,
+          transparent 100%
+        );
+      }
+
+      .explore-btn-secondary:hover {
+        color: #b8b8b8;
+        text-shadow:
+          1px 1px 3px rgba(0, 0, 0, 1),
+          0 0 12px rgba(138, 138, 138, 0.4);
+      }
+
+      .explore-btn svg {
+        width: clamp(14px, 3vw, 16px);
+        height: clamp(14px, 3vw, 16px);
+        fill: currentColor;
+        filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.9));
+        flex-shrink: 0;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -50%) translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) translateY(0);
+        }
+      }
+
+      /* Audio Controls */
+      #audio-controls {
+        position: fixed;
+        top: 5rem;
+        right: 3rem;
+        z-index: 200;
+        display: flex;
+        gap: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.8s ease-in 0.5s;
+        pointer-events: none;
+      }
+
+      #audio-controls.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .audio-btn {
+        width: 40px;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+      }
+
+      .audio-btn:hover {
+        background: rgba(212, 175, 55, 0.2);
+        border-color: rgba(212, 175, 55, 0.8);
+        transform: scale(1.05);
+      }
+
+      .audio-btn:active {
+        transform: scale(0.95);
+      }
+
+      .audio-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: #d4af37;
+      }
+
+      .audio-btn.muted svg {
+        fill: rgba(212, 175, 55, 0.4);
+      }
+
+      /* HUD */
+      #hud {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+        opacity: 0;
+        transition: opacity 0.8s ease-in 0.5s;
+      }
+
+      #hud.visible {
+        opacity: 1;
+      }
+
+      /* Top HUD */
+      .hud-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 2rem 3rem;
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-start;
+      }
+
+      .hud-title {
+        position: absolute;
+        bottom: 2rem;
+        right: 3rem;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9))
+          drop-shadow(0 0 20px rgba(212, 175, 55, 0.3));
+      }
+
+      .hud-title img {
+        height: 120px;
+        width: auto;
+        display: block;
+      }
+
+      .hud-info {
+        text-align: right;
+        font-family: 'Inter', sans-serif;
+      }
+
+      .hud-location {
+        font-size: 0.85rem;
+        color: rgb(255 224 125);
+        text-transform: uppercase;
+        letter-spacing: 0.15rem;
+        margin-bottom: 0.4rem;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+      }
+
+      .hud-time {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 400;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Bottom HUD */
+      .hud-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 2rem 3.5rem;
+        padding-bottom: 10rem;
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
+      }
+
+      .hud-controls {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.8;
+      }
+
+      .control-hint {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .key {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        background: rgba(212, 175, 55, 0.15);
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #d4af37;
+        min-width: 1.8rem;
+        text-align: center;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      .hud-stats {
+        text-align: right;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .stat-item {
+        margin-bottom: 0.4rem;
+      }
+
+      .stat-label {
+        color: rgb(255 224 125);
+        text-transform: uppercase;
+        letter-spacing: 0.08rem;
+        font-size: 0.75rem;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      .stat-value {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 600;
+        margin-left: 0.6rem;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .loader-title {
+          width: min(85vw, 400px);
+          margin-bottom: 0.5rem;
+        }
+
+        .loader-subtitle {
+          margin-bottom: clamp(1.5rem, 4vh, 3rem);
+        }
+
+        #explore-buttons {
+          margin-top: clamp(6rem, 14vh, 10rem);
+        }
+
+        .explore-btn {
+          min-width: min(90vw, 360px);
+        }
+
+        .hud-top {
+          padding: 1.5rem;
+        }
+
+        .hud-bottom {
+          padding: 1.8rem;
+          padding-bottom: 7rem;
+        }
+
+        .hud-title {
+          bottom: 1.5rem;
+          right: 1.5rem;
+        }
+
+        .hud-title img {
+          height: clamp(60px, 12vw, 80px);
+        }
+
+        .hud-controls,
+        .hud-stats {
+          font-size: 0.7rem;
+        }
+
+        .hud-location {
+          font-size: 0.7rem;
+        }
+
+        .hud-time {
+          font-size: 0.85rem;
+        }
+
+        #audio-controls {
+          top: 4.5rem;
+          right: 1.5rem;
+        }
+
+        .audio-btn {
+          width: 36px;
+          height: 36px;
+        }
+
+        .audio-btn svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .loader-title {
+          width: min(90vw, 300px);
+        }
+
+        .loader-subtitle {
+          margin-bottom: clamp(1rem, 3vh, 2rem);
+        }
+
+        .loader-container {
+          width: 90vw;
+        }
+
+        #explore-buttons {
+          margin-top: clamp(4rem, 10vh, 7rem);
+        }
+
+        .explore-btn {
+          min-width: min(92vw, 320px);
+          padding: 0.5rem 0.8rem;
+        }
+      }
+
+      @media (min-width: 1920px) {
+        .loader-title {
+          width: min(40vw, 700px);
+        }
+
+        .explore-btn {
+          min-width: 480px;
+        }
+
+        #explore-buttons {
+          margin-top: clamp(10rem, 20vh, 16rem);
+        }
       }
     </style>
   </head>
   <body>
-    <div id="progress"><div id="bar"></div></div>
+    <!-- Loader Screen -->
+    <div id="loader-screen">
+      <canvas id="loader-bg"></canvas>
+      <div class="loader-title">
+        <img src="/title.png" />
+      </div>
+      <div class="loader-container">
+        <div id="progress">
+          <div id="bar"></div>
+        </div>
+        <div class="loader-text">Loading</div>
+      </div>
+      <div id="explore-buttons">
+        <button id="explore-with-audio" class="explore-btn explore-btn-primary">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+            />
+          </svg>
+          <span>Explore with Audio</span>
+        </button>
+        <button
+          id="explore-without-audio"
+          class="explore-btn explore-btn-secondary"
+        >
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"
+            />
+          </svg>
+          <span>Explore without Audio</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-top">
+        <div class="hud-info">
+          <div class="hud-location">Lands Between</div>
+          <div class="hud-time" id="time">--:--</div>
+        </div>
+      </div>
+      <div class="hud-title">
+        <img src="/title.png" alt="The Erdtree" />
+      </div>
+
+      <div class="hud-bottom">
+        <div class="hud-stats">
+          <div class="stat-item">
+            <span class="stat-label">FPS</span>
+            <span class="stat-value" id="fps">60</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Quality</span>
+            <span class="stat-value">High</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Controls -->
+    <div id="audio-controls">
+      <button id="mute-btn" class="audio-btn" title="Mute/Unmute">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            id="volume-icon-path"
+            d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+          />
+        </svg>
+      </button>
+    </div>
+
     <canvas id="three"></canvas>
     <script type="module" src="/src/index.js"></script>
   </body>

@@ -122,6 +122,9 @@ export default class ResourceLoader extends EventEmitter {
     this.loaders.textureLoader = new THREE.TextureLoader(this.manager);
     this.loaders.hdriLoader = new HDRLoader(this.manager);
     this.loaders.cubeTextureLoader = new THREE.CubeTextureLoader(this.manager);
+
+    // audio loader
+    this.loaders.audioLoader = new THREE.AudioLoader(this.manager);
   }
 
   initLoading() {
@@ -148,6 +151,9 @@ export default class ResourceLoader extends EventEmitter {
           break;
         case 'cubeMap':
           this.loaders.cubeTextureLoader.load(path, onLoad, onProgress);
+          break;
+        case 'audio':
+          this.loaders.audioLoader.load(path, onLoad, onProgress);
           break;
         default:
           console.warn(`Unknown asset type: ${type}`);

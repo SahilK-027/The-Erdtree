@@ -8,13 +8,14 @@ import FallingLeaves from './Components/FallingLeaves/FallingLeaves.class';
 import Smoke from './Components/Smoke/Smoke.class';
 import FlowfieldParticles from './Components/FlowfieldParticles/FlowfieldParticles.class';
 import Ruins from './Components/Ruins/Ruins.class';
+import IntroSequence from './Components/IntroSequence/IntroSequence.class';
 
 export default class World {
   constructor() {
     this.game = Game.getInstance();
     this.scene = this.game.scene;
 
-    this.scene.fog = new THREE.FogExp2(0x10271f, 0.1);
+    this.scene.fog = new THREE.FogExp2(0x10271f, 0.11);
     this.ground = new Ground();
     this.godrays = new Godrays();
     this.erdtree = new Erdtree();
@@ -35,6 +36,9 @@ export default class World {
     this.flowfieldParticles = new FlowfieldParticles(this.erdtree.model);
 
     this.lighting = new Lighting({ helperEnabled: false });
+    
+    // Initialize intro sequence
+    this.introSequence = new IntroSequence();
   }
 
   update() {
