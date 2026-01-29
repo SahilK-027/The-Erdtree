@@ -580,6 +580,190 @@
           margin-top: clamp(10rem, 20vh, 16rem);
         }
       }
+
+      /* Credits Button */
+      #credits-btn {
+        position: fixed;
+        bottom: 2rem;
+        left: 2rem;
+        z-index: 200;
+        padding: 0.5rem 1rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        color: rgba(212, 175, 55, 0.7);
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        pointer-events: none;
+        text-transform: uppercase;
+        letter-spacing: 0.1rem;
+      }
+
+      #credits-btn.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 0.8s ease-in 0.5s;
+      }
+
+      #credits-btn:hover {
+        background: rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.6);
+        color: rgba(212, 175, 55, 1);
+      }
+
+      /* Credits Modal */
+      #credits-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      #credits-modal.visible {
+        display: flex;
+        opacity: 1;
+      }
+
+      .credits-content {
+        background: linear-gradient(
+          135deg,
+          rgba(20, 15, 10, 0.95) 0%,
+          rgba(10, 8, 6, 0.95) 100%
+        );
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        border-radius: 8px;
+        padding: 2.5rem;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      }
+
+      .credits-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+      }
+
+      .credits-title {
+        font-family: 'Cinzel', serif;
+        font-size: 1.5rem;
+        color: #d6c298;
+        text-transform: uppercase;
+        letter-spacing: 0.2rem;
+      }
+
+      .credits-close {
+        background: none;
+        border: none;
+        color: rgba(212, 175, 55, 0.7);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.3s ease;
+      }
+
+      .credits-close:hover {
+        color: rgba(212, 175, 55, 1);
+      }
+
+      .credits-section {
+        margin-bottom: 1.5rem;
+      }
+
+      .credits-section-title {
+        font-family: 'Cinzel', serif;
+        font-size: 1rem;
+        color: #d4af37;
+        text-transform: uppercase;
+        letter-spacing: 0.15rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .credits-section p {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.6;
+        margin-bottom: 0.5rem;
+      }
+
+      .credits-section a {
+        color: #d4af37;
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+
+      .credits-section a:hover {
+        color: #f4e4c1;
+        text-decoration: underline;
+      }
+
+      .credits-content::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .credits-content::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+      }
+
+      .credits-content::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.4);
+        border-radius: 4px;
+      }
+
+      .credits-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(212, 175, 55, 0.6);
+      }
+
+      @media (max-width: 768px) {
+        #credits-btn {
+          bottom: 1.5rem;
+          left: 1.5rem;
+          font-size: 0.7rem;
+          padding: 0.4rem 0.8rem;
+        }
+
+        .credits-content {
+          padding: 2rem 1.5rem;
+          width: 95%;
+        }
+
+        .credits-title {
+          font-size: 1.2rem;
+        }
+
+        .credits-section-title {
+          font-size: 0.9rem;
+        }
+
+        .credits-section p {
+          font-size: 0.8rem;
+        }
+      }
     </style>
   </head>
   <body>
@@ -656,7 +840,100 @@
       </button>
     </div>
 
+    <!-- Credits Button -->
+    <button id="credits-btn">Credits</button>
+
+    <!-- Credits Modal -->
+    <div id="credits-modal">
+      <div class="credits-content">
+        <div class="credits-header">
+          <h2 class="credits-title">Credits</h2>
+          <button class="credits-close" id="credits-close">&times;</button>
+        </div>
+
+        <div class="credits-section">
+          <h3 class="credits-section-title">Music</h3>
+          <p>
+            Background Music by
+            <a
+              href="https://pixabay.com/users/hitslab-47305729/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=326441"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Ievgen Poltavskyi</a
+            >
+            from
+            <a
+              href="https://pixabay.com/music//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=326441"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Pixabay</a
+            >
+          </p>
+          <p>Narration music by ElevenLabs</p>
+        </div>
+
+        <div class="credits-section">
+          <h3 class="credits-section-title">Ruins model</h3>
+          <p>
+            "Desert Ruins"
+            <a href="https://skfb.ly/6Xt9x" target="_blank" rel="noopener noreferrer"
+              >(https://skfb.ly/6Xt9x)</a
+            >
+            by Inknot is licensed under
+            <a
+              href="http://creativecommons.org/licenses/by/4.0/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Creative Commons Attribution</a
+            >
+          </p>
+        </div>
+
+        <div class="credits-section">
+          <h3 class="credits-section-title">Shaders</h3>
+          <p>
+            Loader Shader by Jan Mróz (jaszunio15)<br />
+            License: CC BY 3.0
+          </p>
+        </div>
+      </div>
+    </div>
+
     <canvas id="three"></canvas>
     <script type="module" src="/src/index.js"></script>
+
+    <script>
+      // Credits modal functionality
+      const creditsBtn = document.getElementById('credits-btn');
+      const creditsModal = document.getElementById('credits-modal');
+      const creditsClose = document.getElementById('credits-close');
+
+      creditsBtn.addEventListener('click', () => {
+        creditsModal.classList.add('visible');
+      });
+
+      creditsClose.addEventListener('click', () => {
+        creditsModal.classList.remove('visible');
+      });
+
+      creditsModal.addEventListener('click', (e) => {
+        if (e.target === creditsModal) {
+          creditsModal.classList.remove('visible');
+        }
+      });
+
+      // Show credits button when HUD is visible
+      const hud = document.getElementById('hud');
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            if (hud.classList.contains('visible')) {
+              creditsBtn.classList.add('visible');
+            }
+          }
+        });
+      });
+      observer.observe(hud, { attributes: true });
+    </script>
   </body>
 </html>
