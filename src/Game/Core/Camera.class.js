@@ -70,7 +70,7 @@ export default class Camera {
     this.controls = new OrbitControls(this.cameraInstance, this.canvas);
     this.controls.enableDamping = true;
     this.controls.enableRotate = true;
-    this.controls.enableZoom = true;
+    this.controls.enableZoom = false;
     this.controls.enabled = true;
     this.controls.target.copy(this.introStartTarget);
     this.controls.minPolarAngle = Math.PI / 8;
