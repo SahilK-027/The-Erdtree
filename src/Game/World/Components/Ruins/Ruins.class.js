@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import Game from '../../../Game.class';
 
 export default class Ruins {
-  constructor() {
+  constructor(options = {}) {
     this.game = Game.getInstance();
     this.scene = this.game.scene;
     this.resources = this.game.resources;
@@ -10,12 +10,14 @@ export default class Ruins {
     this.isDebugEnabled = this.game.isDebugEnabled;
 
     this.params = {
-      scale: 0.7,
-      positionX: 0,
-      positionY: 0,
-      positionZ: -9,
-      rotationY: 1.57,
+      scale: options.scale ?? 0.7,
+      positionX: options.positionX ?? 0,
+      positionY: options.positionY ?? 0,
+      positionZ: options.positionZ ?? -9,
+      rotationY: options.rotationY ?? 1.57,
     };
+
+    this.debugFolder = options.debugFolder ?? 'Ruins';
 
     this.setup();
 
@@ -26,7 +28,8 @@ export default class Ruins {
 
   setup() {
     const gltf = this.resources.items.ruinsModel;
-    this.model = gltf.scene;
+    // Clone the scene so each instance is independent
+    this.model = gltf.scene.clone();
 
     this.model.traverse((child) => {
       if (child.isMesh) {
@@ -49,7 +52,7 @@ export default class Ruins {
   }
 
   initTweakPane() {
-    const folder = 'Ruins';
+    const folder = this.debugFolder;
 
     this.debug.add(
       this.params,

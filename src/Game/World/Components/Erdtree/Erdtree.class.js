@@ -60,6 +60,15 @@ export default class Erdtree {
       }
     });
 
+    // Calculate the bounding box to find the actual center
+    const box = new THREE.Box3().setFromObject(this.model);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    
+    // Store the visual center for camera targeting
+    this.visualCenter = center.clone();
+    
+    // Apply transformations
     this.model.scale.setScalar(this.params.scale);
     this.model.position.set(
       this.params.positionX,
@@ -71,6 +80,12 @@ export default class Erdtree {
       this.params.rotationY,
       0,
     );
+    
+    // Update visual center with transformations
+    this.visualCenter.multiplyScalar(this.params.scale);
+    this.visualCenter.applyEuler(new THREE.Euler(0, this.params.rotationY, 0));
+    this.visualCenter.add(this.model.position);
+    
     this.scene.add(this.model);
 
     this.createInstancedLeaves();

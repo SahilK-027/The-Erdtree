@@ -19,7 +19,28 @@ export default class World {
     this.ground = new Ground();
     this.godrays = new Godrays();
     this.erdtree = new Erdtree();
-    this.ruins = new Ruins();
+
+    // Set camera target to erdtree's visual center
+    if (this.erdtree.visualCenter && this.game.camera) {
+      this.game.camera.setTargetFromErdtree(this.erdtree.visualCenter);
+    }
+
+    this.ruins = new Ruins({
+      positionX: 0,
+      positionY: 0,
+      positionZ: -9,
+      debugFolder: 'Ruins 1',
+    });
+
+    this.ruins2 = new Ruins({
+      scale: 0.5,
+      positionX: -12.6,
+      positionY: 0.0,
+      positionZ: -2.2,
+      rotationY: 2.32,
+      debugFolder: 'Ruins 2',
+    });
+
     this.fallingLeaves = new FallingLeaves();
     this.Smoke = new Smoke({
       radius: 5,
@@ -29,14 +50,14 @@ export default class World {
       randomOffset: 10.0,
       color: 0xffed9f,
       opacity: 0.5,
-      yOffset: -1.8
+      yOffset: -1.8,
     });
 
     // Initialize flowfield particles after erdtree is created
     this.flowfieldParticles = new FlowfieldParticles(this.erdtree.model);
 
     this.lighting = new Lighting({ helperEnabled: false });
-    
+
     // Initialize intro sequence
     this.introSequence = new IntroSequence();
   }

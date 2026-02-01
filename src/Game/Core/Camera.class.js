@@ -14,26 +14,26 @@ export default class Camera {
 
     this.params = { fov, near, far };
 
-    // Erdtree focal point - look at the trunk/lower canopy
+    // Will be set by the erdtree once it calculates its visual center
     this.targetPoint = new THREE.Vector3(2.8, 0.85, 0);
 
     this.idealRatio = 16 / 9;
     this.ratioOverflow = 0;
     this.initialCameraPosition = new THREE.Vector3(
-      1.4274844135230773,
-      0.1,
-      1.2825497963632837,
+      1.65,
+      1.21,
+      1.65,
     );
 
     // Intro camera animation
-    this.introStartPosition = new THREE.Vector3(2.5, 1.5, 0.3); // Near top of tree, close to leaves
-    this.introStartTarget = new THREE.Vector3(2.5, 1.5, 0); // Looking at upper canopy
+    this.introStartPosition = new THREE.Vector3(2.5, 1.5, 0.3);
+    this.introStartTarget = new THREE.Vector3(2.5, 1.5, 0);
     this.introAnimation = {
       isActive: false,
       progress: 0,
       duration: 6,
       startTime: 0,
-      easeOutCubic: (t) => 1 - Math.pow(1 - t, 3), // Smooth easing
+      easeOutCubic: (t) => 1 - Math.pow(1 - t, 3),
     };
 
     this.setPerspectiveCameraInstance(fov, near, far);
@@ -41,6 +41,14 @@ export default class Camera {
 
     if (this.isDebugEnabled) {
       this.initTweakPane();
+    }
+  }
+
+  setTargetFromErdtree(visualCenter) {
+    // Update target to the erdtree's visual center
+    this.targetPoint.copy(visualCenter);
+    if (this.controls) {
+      this.controls.target.copy(visualCenter);
     }
   }
 
@@ -61,9 +69,9 @@ export default class Camera {
   setOrbitControls() {
     this.controls = new OrbitControls(this.cameraInstance, this.canvas);
     this.controls.enableDamping = true;
-    this.controls.enableRotate = false;
-    this.controls.enableZoom = false;
-    this.controls.enabled = false;
+    this.controls.enableRotate = true;
+    this.controls.enableZoom = true;
+    this.controls.enabled = true;
     this.controls.target.copy(this.introStartTarget);
     this.controls.minPolarAngle = Math.PI / 8;
     this.controls.maxPolarAngle = Math.PI / 2.05;
